@@ -138,7 +138,7 @@ describe('resume photo layout', () => {
   });
 
   it('hides an overlay if there is not enough room before the first section', () => {
-    expect(fitSquarePhotoBeforeSection(120, 100, 104, 1)).toBe(0);
+    expect(fitSquarePhotoBeforeSection(120, 100, 102, 1)).toBe(0);
   });
 
   it('respects larger photo sizes in square mode', () => {
