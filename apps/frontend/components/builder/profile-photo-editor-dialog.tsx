@@ -12,7 +12,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import type { PhotoMutation, ResumePhotoSettings } from '@/components/dashboard/resume-component';
-import { AdaptiveCropBox, type CropRect } from '@/components/builder/adaptive-crop-box';
+import { AdaptiveCropBox, toSquareCrop, type CropRect } from '@/components/builder/adaptive-crop-box';
 import { useTranslations } from '@/lib/i18n';
 
 const DEFAULT_SIZE = 88;
@@ -50,6 +50,7 @@ export function ProfilePhotoEditorDialog({
   const defaultSize = squarePhoto ? MIN_SQUARE_SIZE : DEFAULT_SIZE;
   const [size, setSize] = useState(Math.max(squarePhoto ? MIN_SQUARE_SIZE : 64, initialSettings?.size ?? defaultSize));
   const [crop, setCrop] = useState<CropRect>(FULL_IMAGE_CROP);
+  const [sourceAspectRatio, setSourceAspectRatio] = useState<number | null>(null);
 
   const initialCrop = useMemo<CropRect>(() => {
     if (!initialSettings) return FULL_IMAGE_CROP;
@@ -64,11 +65,16 @@ export function ProfilePhotoEditorDialog({
   useEffect(() => {
     if (!open) return;
     setCrop(initialCrop);
+    setSourceAspectRatio(null);
     setSize(Math.max(squarePhoto ? MIN_SQUARE_SIZE : 64, initialSettings?.size ?? defaultSize));
   }, [defaultSize, initialCrop, initialSettings?.size, open, squarePhoto]);
 
   const handleReset = () => {
-    setCrop(FULL_IMAGE_CROP);
+    setCrop(
+      squarePhoto && sourceAspectRatio
+        ? toSquareCrop(FULL_IMAGE_CROP, sourceAspectRatio)
+        : FULL_IMAGE_CROP
+    );
     setSize(defaultSize);
   };
 
@@ -116,6 +122,11 @@ export function ProfilePhotoEditorDialog({
                 imageUrl={sourceUrl}
                 value={crop}
                 onChange={setCrop}
+                squareAspectRatio={squarePhoto ? sourceAspectRatio ?? undefined : undefined}
+                onSourceLoad={(ratio) => {
+                  setSourceAspectRatio(ratio);
+                  if (squarePhoto) setCrop(toSquareCrop(initialCrop, ratio));
+                }}
                 imageAlt={t('resume.photo.profilePhoto')}
                 disabled={applying}
                 moveLabel={t('resume.photo.moveCrop')}
