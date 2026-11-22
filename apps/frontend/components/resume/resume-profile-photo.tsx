@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type 
 import type { ResumePhotoSettings } from '@/components/dashboard/resume-component';
 import { getResumePhotoUrl } from '@/lib/api/resume';
 import { fitSquarePhotoAroundText, fitSquarePhotoBeforeSection, type PhotoTextRect } from '@/lib/utils/resume-photo-fit';
-import { getPhotoTopShiftPx } from '@/lib/utils/resume-photo-page';
+import { getPhotoTopShiftPx, getPhotoRightShiftPx } from '@/lib/utils/resume-photo-page';
 import styles from './styles/resume-profile-photo.module.css';
 
 interface ResumeProfilePhotoProps {
@@ -76,6 +76,7 @@ interface ResumePhotoLayoutProps {
   template?: string;
   renderPhoto?: boolean;
   photoMarginTopMm?: number;
+  photoMarginRightMm?: number;
   editable?: boolean;
   editLabel?: string;
   profilePhotoLabel?: string;
@@ -90,6 +91,7 @@ export function ResumePhotoLayout({
   template,
   renderPhoto = true,
   photoMarginTopMm = 10,
+  photoMarginRightMm = 10,
   editable,
   editLabel,
   profilePhotoLabel,
@@ -102,6 +104,7 @@ export function ResumePhotoLayout({
   const modernDeedy = template === 'modern-deedy';
   const photoVisible = Boolean(renderPhoto && resumeId && photo && photo.visible !== false && !loadFailed);
   const topShiftPx = getPhotoTopShiftPx(photoMarginTopMm);
+  const rightShiftPx = getPhotoRightShiftPx(photoMarginRightMm);
   // Try to keep the requested large square, but never sacrifice the underlying text.
   const desiredSize = modernDeedy ? Math.max(120, photo?.size ?? 120) : photo?.size ?? 88;
 
@@ -145,7 +148,7 @@ export function ResumePhotoLayout({
 
       const portraitTop = frame.top - topShiftPx * scale;
       const collisionSafeSize = fitSquarePhotoAroundText(
-        desiredSize, { top: portraitTop, right: frame.right }, lines, scale
+        desiredSize, { top: portraitTop, right: frame.right + rightShiftPx * scale }, lines, scale
       );
 
       // A short heading such as SUMMARY may sit entirely left of the portrait,
@@ -171,7 +174,7 @@ export function ResumePhotoLayout({
       observer?.disconnect();
       window.removeEventListener('resize', measure);
     };
-  }, [modernDeedy, photoVisible, desiredSize, topShiftPx]);
+  }, [modernDeedy, photoVisible, desiredSize, topShiftPx, rightShiftPx]);
 
   if (!renderPhoto || !resumeId || !photo || photo.visible === false || loadFailed) {
     return <>{children}</>;
@@ -179,7 +182,11 @@ export function ResumePhotoLayout({
 
   const displaySize = modernDeedy ? Math.min(desiredSize, safePhotoSize ?? desiredSize) : photo.size;
   const layoutStyle: CSSProperties | undefined = modernDeedy
-    ? ({ '--resume-profile-photo-size': `${displaySize}px`, '--resume-profile-photo-top-shift': `${topShiftPx}px` } as CSSProperties)
+    ? ({
+        '--resume-profile-photo-size': `${displaySize}px`,
+        '--resume-profile-photo-top-shift': `${topShiftPx}px`,
+        '--resume-profile-photo-right-shift': `${rightShiftPx}px`,
+      } as CSSProperties)
     : undefined;
 
   return (
