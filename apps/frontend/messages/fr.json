@@ -1272,7 +1272,9 @@
         "upload": "La photo n’a pas pu être téléversée. Réessayez.",
         "save": "La photo n’a pas pu être enregistrée. Réessayez.",
         "saveRequired": "Enregistrez le CV avant d’ajouter une photo."
-      }
+      },
+      "show": "Afficher la photo",
+      "hide": "Masquer la photo"
     },
     "personalInfo": {
       "name": "Nom complet",

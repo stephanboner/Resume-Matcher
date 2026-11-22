@@ -1308,7 +1308,9 @@
         "upload": "The photo could not be uploaded. Please try again.",
         "save": "The photo could not be saved. Please try again.",
         "saveRequired": "Save the resume before adding a photo."
-      }
+      },
+      "show": "사진 표시",
+      "hide": "사진 숨기기"
     }
   },
   "coverLetter": {
