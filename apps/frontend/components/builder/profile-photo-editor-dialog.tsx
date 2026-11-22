@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { SpinnerGap as Loader2 } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -132,19 +132,19 @@ export function ProfilePhotoEditorDialog({
                 step="1"
                 value={size}
                 onChange={(event) => setSize(Number(event.target.value))}
-                className="w-full accent-blue-700"
+                className="w-full accent-primary"
               />
             </label>
           </div>
 
           {error && (
-            <div role="alert" className="border-2 border-red-600 bg-red-50 p-3 text-red-700">
+            <div role="alert" className="border-2 border-destructive bg-destructive-tint p-3 text-destructive">
               {error}
             </div>
           )}
         </div>
 
-        <DialogFooter className="flex-row justify-end gap-3 border-t border-black bg-secondary p-4">
+        <DialogFooter className="flex-row justify-end gap-3 border-t border-black bg-panel p-4">
           <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={applying}>
             {t('common.cancel')}
           </Button>
