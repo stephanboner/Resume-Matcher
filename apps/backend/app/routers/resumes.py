@@ -77,6 +77,7 @@ from app.schemas.models import ResumeTemplate
 from app.schemas.refinement import RefinementConfig
 from app.schemas.writing import ApplyKeywordsRequest
 from app.schemas.writing_report import WritingReport
+from app.services.resume_pdf_photo import add_resume_photo_to_pdf
 from app.services.resume_photo import (PhotoValidationError, MAX_UPLOAD_BYTES as MAX_PHOTO_UPLOAD_BYTES, process_uploaded_photo, render_photo_derivative, strip_photo_metadata)
 from app.services.ats import compute_ats_score
 from app.services.bullet_selector import SELECTABLE_SECTIONS
@@ -2617,11 +2618,31 @@ async def download_resume_pdf(
         "left": marginLeft,
     }
 
-    # Render PDF with margins applied to every page
+    # Render the text-only Modern Deedy page with Chromium first. Its photo is
+    # then merged onto page 1 in PDF coordinates; placing it outside the HTML
+    # printable area would otherwise trigger Chromium's shrink-to-fit algorithm
+    # and distort the full document layout.
     try:
         pdf_bytes = await render_resume_pdf(url, pageSize, margins=pdf_margins)
     except PDFRenderError as e:
         raise HTTPException(status_code=503, detail=str(e))
+
+    if template == "modern-deedy":
+        personal = (resume.get("processed_data") or {}).get("personalInfo") or {}
+        photo_settings = personal.get("photo") if isinstance(personal, dict) else None
+        if isinstance(photo_settings, dict) and photo_settings.get("visible", True):
+            photo = await db.get_resume_photo(resume_id)
+            if photo is not None:
+                try:
+                    requested = max(120, int(photo_settings.get("size") or 120))
+                    pdf_bytes = await asyncio.to_thread(
+                        add_resume_photo_to_pdf, pdf_bytes, photo["display_data"], requested
+                    )
+                except Exception as error:
+                    logger.exception("Failed to embed Modern Deedy photo in PDF: %s", type(error).__name__)
+                    raise HTTPException(
+                        status_code=503, detail="Could not embed the resume photo in the PDF."
+                    ) from error
 
     headers = {"Content-Disposition": f'attachment; filename="resume_{resume_id}.pdf"'}
     return Response(content=pdf_bytes, media_type="application/pdf", headers=headers)
