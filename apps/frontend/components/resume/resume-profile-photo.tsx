@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import type { ResumePhotoSettings } from '@/components/dashboard/resume-component';
 import { getResumePhotoUrl } from '@/lib/api/resume';
+import { fitSquarePhotoAroundText, type PhotoTextRect } from '@/lib/utils/resume-photo-fit';
 import styles from './styles/resume-profile-photo.module.css';
 
 interface ResumeProfilePhotoProps {
@@ -90,25 +91,78 @@ export function ResumePhotoLayout({
   onEditPhoto,
 }: ResumePhotoLayoutProps) {
   const [loadFailed, setLoadFailed] = useState(false);
+  const [safePhotoSize, setSafePhotoSize] = useState<number | null>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const modernDeedy = template === 'modern-deedy';
+  const photoVisible = Boolean(resumeId && photo && photo.visible !== false && !loadFailed);
+  // Try to keep the requested large square, but never sacrifice the underlying text.
+  const desiredSize = modernDeedy ? Math.max(120, photo?.size ?? 120) : photo?.size ?? 88;
 
   useEffect(() => {
     setLoadFailed(false);
   }, [resumeId, photo?.version]);
 
+  useLayoutEffect(() => {
+    if (!modernDeedy || !photoVisible || !wrapperRef.current) return;
+    const wrapper = wrapperRef.current;
+    const textRoot = wrapper.querySelector<HTMLElement>('.resume-template-modern-deedy');
+    if (!textRoot) return;
+
+    let active = true;
+    const measure = () => {
+      if (!active) return;
+      const frame = wrapper.getBoundingClientRect();
+      const scale = wrapper.offsetWidth > 0 ? frame.width / wrapper.offsetWidth : 1;
+      if (frame.width <= 0) return;
+
+      // Measure actual rendered text lines, not the broad full-width section boxes.
+      // This leaves empty header space available and catches wrapped summary lines.
+      const lines: PhotoTextRect[] = [];
+      const walker = document.createTreeWalker(textRoot, NodeFilter.SHOW_TEXT);
+      const range = document.createRange();
+      let node: Node | null;
+      while ((node = walker.nextNode())) {
+        if (!node.textContent?.trim()) continue;
+        range.selectNodeContents(node);
+        for (const rect of Array.from(range.getClientRects())) {
+          if (rect.width > 0 && rect.height > 0) {
+            lines.push({ left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom });
+          }
+        }
+      }
+      range.detach?.();
+
+      const fitted = fitSquarePhotoAroundText(
+        desiredSize, { top: frame.top, right: frame.right }, lines, scale
+      );
+      setSafePhotoSize((previous) => previous === fitted ? previous : fitted);
+    };
+
+    measure();
+    const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
+    observer?.observe(textRoot);
+    observer?.observe(wrapper);
+    window.addEventListener('resize', measure);
+    void document.fonts?.ready.then(measure);
+    return () => {
+      active = false;
+      observer?.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  });
+
   if (!resumeId || !photo || photo.visible === false || loadFailed) {
     return <>{children}</>;
   }
 
-  // Enlarge existing smaller photos in Modern Deedy without migrating their data.
-  // Other templates retain their adaptive sizing and crop behaviour.
-  const modernDeedy = template === 'modern-deedy';
-  const displaySize = modernDeedy ? Math.max(120, photo.size) : photo.size;
+  const displaySize = modernDeedy ? Math.min(desiredSize, safePhotoSize ?? desiredSize) : photo.size;
   const layoutStyle: CSSProperties | undefined = modernDeedy
     ? ({ '--resume-profile-photo-size': `${displaySize}px` } as CSSProperties)
     : undefined;
 
   return (
     <div
+      ref={wrapperRef}
       data-photo-overlay="true"
       className={`${styles.wrapper} ${modernDeedy ? styles.modernDeedy : ''}`}
       style={layoutStyle}
