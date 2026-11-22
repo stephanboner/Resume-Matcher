@@ -1,0 +1,49 @@
+.wrapper {
+  position: relative;
+}
+
+.photo {
+  position: absolute;
+  top: -8px;
+  right: 0;
+  z-index: 2;
+  overflow: visible;
+  border: 1px solid var(--resume-border-primary);
+  background: white;
+}
+
+.image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+}
+
+.editHitTarget {
+  position: absolute;
+  inset: 0;
+  cursor: pointer;
+  border: 0;
+  background: transparent;
+}
+
+@media print {
+  .editHitTarget {
+    display: none;
+  }
+}
+
+/* Place the portrait relative to the physical page top-right corner.
+   Negative offsets compensate for the print engine's text margins; neither
+   the text geometry nor the section flow is modified. */
+.modernDeedy .photo {
+  /* Subtraction is more broadly supported than multiplying a length by -1. */
+  top: calc(0px - var(--resume-profile-photo-top-shift, 22px));
+  right: calc(0px - var(--resume-profile-photo-right-shift, 22px));
+}
+
+.modernDeedy .image {
+  object-fit: cover;
+  /* Keep the top of the portrait visible even for older, non-square crops. */
+  object-position: center top;
+}

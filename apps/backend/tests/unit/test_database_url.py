@@ -214,7 +214,7 @@ async def test_copy_rows_copies_every_table_once(tmp_path: Path) -> None:
         await source.create_queue_item("q1", resume["resume_id"], "Engineer")
 
         counts = copy_rows(source, target)
-        assert counts == {table.name: 1 for table in Base.metadata.sorted_tables}
+        assert counts == {table.name: (0 if table.name == 'resume_photos' else 1) for table in Base.metadata.sorted_tables}
         assert _dump(target) == _dump(source)
         assert await target.get_resume(resume["resume_id"]) == await source.get_resume(
             resume["resume_id"]

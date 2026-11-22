@@ -32,6 +32,16 @@
   margin-bottom: var(--section-gap);
 }
 
+/* Photo stays a separate absolute overlay. Text and the following sections retain
+   the exact same vertical spacing and full available width as the no-photo resume. */
+.headerWithPhoto {
+  text-align: left;
+}
+
+.headerWithPhoto .contactRow {
+  justify-content: flex-start;
+}
+
 .name {
   font-family: var(--header-font);
   font-size: calc(var(--font-size-base) * var(--header-scale));

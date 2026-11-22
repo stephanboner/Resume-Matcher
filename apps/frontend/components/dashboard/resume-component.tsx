@@ -18,6 +18,7 @@ import {
   settingsToCssVars,
 } from '@/lib/types/template-settings';
 import baseStyles from '@/components/resume/styles/_base.module.css';
+import { ResumePhotoLayout } from '@/components/resume/resume-profile-photo';
 // The Serif, Sans and Mono faces (lib/types/template-settings.ts), one file per weight
 // the templates use. The preview renders in the reader's browser and the PDF in the
 // server's Chromium, which have different local fonts, so both load these files to
@@ -45,6 +46,20 @@ import '@fontsource/noto-sans-mono/600.css';
 import '@fontsource/noto-sans-mono/700.css';
 import '@fontsource/noto-sans-mono/800.css';
 
+export interface PhotoMutation {
+  cropX: number;
+  cropY: number;
+  cropWidth: number;
+  cropHeight: number;
+  size: number;
+  visible?: boolean;
+}
+
+export interface ResumePhotoSettings extends PhotoMutation {
+  version: number;
+  aspectRatio: number;
+}
+
 export interface PersonalInfo {
   name?: string;
   title?: string;
@@ -54,6 +69,7 @@ export interface PersonalInfo {
   website?: string;
   linkedin?: string;
   github?: string;
+  photo?: ResumePhotoSettings | null;
 }
 
 export interface Experience {
@@ -164,7 +180,11 @@ export interface ResumeData {
 
 interface ResumeProps {
   resumeData: ResumeData;
+  resumeId?: string;
   template?: TemplateType;
+  renderProfilePhoto?: boolean;
+  photoMarginTopMm?: number;
+  photoMarginRightMm?: number;
   settings?: TemplateSettings;
   additionalSectionLabels?: Partial<AdditionalSectionLabels>;
   sectionHeadings?: Partial<ResumeSectionHeadings>;
@@ -190,7 +210,11 @@ interface ResumeProps {
  */
 const Resume: React.FC<ResumeProps> = ({
   resumeData,
+  resumeId,
   template = 'swiss-single',
+  renderProfilePhoto = true,
+  photoMarginTopMm,
+  photoMarginRightMm,
   settings,
   additionalSectionLabels,
   sectionHeadings,
@@ -215,6 +239,17 @@ const Resume: React.FC<ResumeProps> = ({
   const cssVars = settingsToCssVars(mergedSettings, locale);
 
   return (
+    <ResumePhotoLayout
+      resumeId={resumeId}
+      name={resumeData.personalInfo?.name}
+      photo={resumeData.personalInfo?.photo ?? undefined}
+      template={mergedSettings.template}
+      renderPhoto={renderProfilePhoto}
+      photoMarginTopMm={photoMarginTopMm ?? settings?.margins?.top ?? 10}
+      photoMarginRightMm={photoMarginRightMm ?? settings?.margins?.right ?? 10}
+      editLabel="Edit photo"
+      profilePhotoLabel="Profile photo"
+    >
     <div
       className={`${baseStyles['resume-body']} bg-white text-black w-full mx-auto resume-template-${mergedSettings.template}`}
       style={cssVars}
@@ -292,6 +327,11 @@ const Resume: React.FC<ResumeProps> = ({
           data={resumeData}
           showContactIcons={mergedSettings.showContactIcons}
           additionalSectionLabels={additionalSectionLabels}
+          hasProfilePhoto={Boolean(
+            resumeId &&
+            resumeData.personalInfo?.photo &&
+            resumeData.personalInfo.photo.visible !== false
+          )}
         />
       )}
       {mergedSettings.template === 'deedy' && (
@@ -304,6 +344,7 @@ const Resume: React.FC<ResumeProps> = ({
         />
       )}
     </div>
+    </ResumePhotoLayout>
   );
 };
 

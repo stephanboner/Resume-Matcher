@@ -81,6 +81,28 @@ describe('ResumeModernDeedy', () => {
     );
   });
 
+  it('left-aligns the header only with a visible photo', () => {
+    const withoutPhoto = render(<ResumeModernDeedy data={data} />);
+    expect(withoutPhoto.container.querySelector('header')?.className).not.toContain(
+      'headerWithPhoto'
+    );
+    withoutPhoto.unmount();
+
+    const withPhoto = render(<ResumeModernDeedy data={data} hasProfilePhoto />);
+    const header = withPhoto.container.querySelector('header');
+    expect(header?.className).toContain('headerWithPhoto');
+    expect(header?.textContent).toContain('Sarah Chen');
+    expect(header?.textContent).toContain('sarah.chen@example.com');
+  });
+
+  it('keeps contact separators in the left-aligned photo header', () => {
+    const { container } = render(<ResumeModernDeedy data={data} hasProfilePhoto />);
+    const contact = container.querySelector('header')?.querySelector('[class*=contactRow]');
+    expect(contact).not.toBeNull();
+    expect(contact?.textContent).toContain('sarah.chen@example.com | +1 415 555 0142');
+    expect(contact?.textContent).toContain(' | linkedin.com/in/sarahchen | ');
+  });
+
   it('puts company, role, place and dates on one header line in reading order', () => {
     const { container } = render(<ResumeModernDeedy data={data} />);
     expect(text(container)).toContain(
@@ -225,6 +247,18 @@ describe('modern-deedy.module.css', () => {
   it('fakes small caps with uppercase instead of font small caps', () => {
     expect(css).not.toMatch(/small-caps|smcp|font-feature-settings|font-variant-caps/);
     expect(css).toMatch(/\.smallCaps\s*\{[^}]*text-transform:\s*uppercase/);
+  });
+
+  it('does not reserve extra header space or hide pipe separators for a photo', () => {
+    // An absolute photo must not push the rest of a dense CV down the page.
+    const css = readFileSync(
+      join(process.cwd(), 'components/resume/styles/modern-deedy.module.css'),
+      'utf8'
+    );
+    const headerWithPhoto = css.match(/\.headerWithPhoto\s*\{([^}]*)\}/)?.[1] ?? '';
+    expect(headerWithPhoto).toContain('text-align: left');
+    expect(headerWithPhoto).not.toMatch(/padding|margin|height|width|display/);
+    expect(css).not.toMatch(/\.headerWithPhoto\s+\.contactRow\s*>\s*\.pipe\s*\{/);
   });
 
   it('uses solid colours only, never opacity', () => {

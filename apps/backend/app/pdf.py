@@ -424,6 +424,17 @@ async def _render_page_to_pdf(
     if work_deadline is None:
         work_deadline = asyncio.get_running_loop().time() + (_NAV_TIMEOUT_MS / 1000)
 
+    # Chromium normally uses screen media until page.pdf() is called.
+    # Dynamic photo measurements must use the same print layout as the PDF,
+    # otherwise the portrait can jump, overlap the text, or be clipped.
+    emulate_media = getattr(page, "emulate_media", None)
+    if callable(emulate_media):
+        await _await_before_deadline(
+            emulate_media(media="print"),
+            work_deadline,
+            "print-media setup",
+        )
+
     response = await _await_before_deadline(
         page.goto(
             url,
@@ -469,6 +480,20 @@ async def _render_page_to_pdf(
                 "Print page reported %r for %s", print_error, _redact_draft_token(url)
             )
             raise PDFRenderError("The print page could not load the resume.")
+    # Wait for any server-managed resume photos to decode before capturing the page.
+    await _await_before_deadline(
+        page.wait_for_function(
+            """() => Array.from(document.querySelectorAll('[data-photo-overlay]')).every(
+                (overlay) => overlay.getAttribute('data-photo-fit-ready') !== 'false'
+                    && Array.from(overlay.querySelectorAll('img')).every(
+                        (img) => img.complete && img.naturalWidth > 0
+                    )
+            )""",
+            timeout=_stage_timeout_ms(work_deadline),
+        ),
+        work_deadline,
+        "profile photo readiness",
+    )
     # Bound the fonts wait too — plain page.evaluate has no timeout, so a stuck
     # font load could otherwise hang the render past _NAV_TIMEOUT_MS.
     await _await_before_deadline(

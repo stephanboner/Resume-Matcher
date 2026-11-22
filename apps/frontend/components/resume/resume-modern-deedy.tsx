@@ -27,6 +27,7 @@ interface ResumeModernDeedyProps {
   data: ResumeData;
   showContactIcons?: boolean;
   additionalSectionLabels?: Partial<AdditionalSectionLabels>;
+  hasProfilePhoto?: boolean;
 }
 
 type PointStyles = ('bullet' | 'plain')[];
@@ -57,6 +58,7 @@ export const ResumeModernDeedy: React.FC<ResumeModernDeedyProps> = ({
   showContactIcons = false,
   additionalSectionLabels,
   earlierExperienceLabel,
+  hasProfilePhoto = false,
 }) => {
   const { personalInfo, summary, workExperience, education, personalProjects, additional } = data;
 
@@ -279,7 +281,7 @@ export const ResumeModernDeedy: React.FC<ResumeModernDeedyProps> = ({
   return (
     <div className={styles.container}>
       {personalInfo && (
-        <header className={styles.header}>
+        <header className={hasProfilePhoto ? `${styles.header} ${styles.headerWithPhoto}` : styles.header}>
           {personalInfo.name && <h1 className={styles.name}>{personalInfo.name}</h1>}
           {personalInfo.title && <div className={styles.tagline}>{personalInfo.title}</div>}
           {contactItems.length > 0 && (

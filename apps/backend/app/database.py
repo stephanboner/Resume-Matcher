@@ -41,6 +41,7 @@ from app.models import (
     Job,
     QueueItem,
     Resume,
+    ResumePhoto,
     TailoringPreview,
 )
 from app.preview import (
@@ -258,6 +259,51 @@ class Database:
         if row.original_markdown is not None:
             doc["original_markdown"] = row.original_markdown
         return doc
+
+    @staticmethod
+    def _resume_photo_to_dict(photo: ResumePhoto) -> dict[str, Any]:
+        return {
+            "resume_id": photo.resume_id,
+            "source_data": photo.source_data,
+            "display_data": photo.display_data,
+            "source_width": photo.source_width,
+            "source_height": photo.source_height,
+            "version": photo.version,
+        }
+
+    @staticmethod
+    def _with_photo_metadata(data: dict[str, Any] | None, photo: dict[str, Any] | None) -> dict[str, Any]:
+        result = copy.deepcopy(data) if isinstance(data, dict) else {}
+        personal = result.get("personalInfo")
+        if photo is None:
+            if isinstance(personal, dict):
+                personal.pop("photo", None)
+            return result
+        if not isinstance(personal, dict):
+            personal = {}
+            result["personalInfo"] = personal
+        personal["photo"] = copy.deepcopy(photo)
+        return result
+
+    @staticmethod
+    def _photo_metadata(data: dict[str, Any] | None) -> dict[str, Any] | None:
+        personal = data.get("personalInfo") if isinstance(data, dict) else None
+        photo = personal.get("photo") if isinstance(personal, dict) else None
+        return photo if isinstance(photo, dict) else None
+
+    @staticmethod
+    def _copy_photo_row(photo: ResumePhoto, resume_id: str) -> ResumePhoto:
+        return ResumePhoto(
+            resume_id=resume_id,
+            source_data=bytes(photo.source_data),
+            display_data=bytes(photo.display_data),
+            mime_type=photo.mime_type,
+            source_width=photo.source_width,
+            source_height=photo.source_height,
+            version=photo.version,
+            created_at=_now(),
+            updated_at=_now(),
+        )
 
     @staticmethod
     def _job_to_dict(row: Job) -> dict[str, Any]:
@@ -493,6 +539,12 @@ class Database:
             row = await session.get(Resume, resume_id)
             if row is None:
                 raise ResumeNotFoundError(resume_id)
+            # The photo metadata is authoritative and owned by the photo API.
+            if "processed_data" in updates:
+                current_photo = await session.get(ResumePhoto, resume_id)
+                settings = self._photo_metadata(row.processed_data) if current_photo else None
+                updates = dict(updates)
+                updates["processed_data"] = self._with_photo_metadata(updates["processed_data"], settings)
             for key, value in updates.items():
                 if hasattr(row, key):
                     setattr(row, key, value)
@@ -501,6 +553,88 @@ class Database:
             row.updated_at = _now()
             await session.commit()
             return self._resume_to_dict(row)
+
+    async def get_resume_photo(self, resume_id: str) -> dict[str, Any] | None:
+        async with self._session() as session:
+            photo = await session.get(ResumePhoto, resume_id)
+            return self._resume_photo_to_dict(photo) if photo else None
+
+    async def _save_photo(
+        self, resume_id: str, *,
+        settings: dict[str, Any], aspect_ratio: float,
+        display_data: bytes,
+        source_data: bytes | None = None,
+        source_width: int | None = None,
+        source_height: int | None = None,
+    ) -> dict[str, Any]:
+        async with self._write_session() as session:
+            row = await session.get(Resume, resume_id)
+            if row is None:
+                raise ResumeNotFoundError(resume_id)
+            photo = await session.get(ResumePhoto, resume_id)
+            if photo is None and source_data is None:
+                raise ValueError("Resume photo not found")
+            version = (photo.version + 1) if photo else 1
+            if photo is None:
+                photo = ResumePhoto(
+                    resume_id=resume_id, source_data=source_data,
+                    display_data=display_data, mime_type="image/webp",
+                    source_width=source_width, source_height=source_height,
+                    version=version, created_at=_now(), updated_at=_now(),
+                )
+                session.add(photo)
+            else:
+                if source_data is not None:
+                    photo.source_data = source_data
+                    photo.source_width = source_width
+                    photo.source_height = source_height
+                photo.display_data = display_data
+                photo.version = version
+                photo.updated_at = _now()
+            metadata = {**settings, "version": version, "aspectRatio": aspect_ratio}
+            row.processed_data = self._with_photo_metadata(row.processed_data, metadata)
+            row.updated_at = _now()
+            await session.commit()
+            return self._resume_to_dict(row)
+
+    async def put_resume_photo(self, resume_id: str, **kwargs: Any) -> dict[str, Any]:
+        return await self._save_photo(resume_id, **kwargs)
+
+    async def update_resume_photo(self, resume_id: str, **kwargs: Any) -> dict[str, Any]:
+        return await self._save_photo(resume_id, **kwargs)
+
+    async def delete_resume_photo(self, resume_id: str) -> dict[str, Any]:
+        async with self._write_session() as session:
+            row = await session.get(Resume, resume_id)
+            if row is None:
+                raise ResumeNotFoundError(resume_id)
+            photo = await session.get(ResumePhoto, resume_id)
+            if photo is not None:
+                await session.delete(photo)
+            row.processed_data = self._with_photo_metadata(row.processed_data, None)
+            row.updated_at = _now()
+            await session.commit()
+            return self._resume_to_dict(row)
+
+    async def clone_resume_photo(self, source_resume_id: str, target_resume_id: str) -> None:
+        """Copy the photo to a duplicated CV; never share mutable photo rows."""
+        async with self._write_session() as session:
+            original = await session.get(Resume, source_resume_id)
+            target = await session.get(Resume, target_resume_id)
+            if original is None or target is None:
+                raise ResumeNotFoundError(source_resume_id)
+            photo = await session.get(ResumePhoto, source_resume_id)
+            if photo is None:
+                return
+            old = await session.get(ResumePhoto, target_resume_id)
+            if old is not None:
+                await session.delete(old)
+                await session.flush()
+            session.add(self._copy_photo_row(photo, target_resume_id))
+            target.processed_data = self._with_photo_metadata(
+                target.processed_data, self._photo_metadata(original.processed_data)
+            )
+            await session.commit()
 
     async def save_template_settings(
         self, resume_id: str, settings: dict[str, Any]
@@ -639,6 +773,9 @@ class Database:
                 delete(TailoringPreview).where(TailoringPreview.source_id == resume_id)
             )
             was_default = row.is_default_master
+            photo = await session.get(ResumePhoto, resume_id)
+            if photo is not None:
+                await session.delete(photo)
             await session.delete(row)
             if was_default:
                 await session.flush()
@@ -995,6 +1132,12 @@ class Database:
                 )
             await self._validate_preview_inputs(session, preview)
             row = self._new_resume(**resume_fields)
+            source_photo = await session.get(ResumePhoto, preview.source_id)
+            if source_photo is not None:
+                row.processed_data = self._with_photo_metadata(
+                    row.processed_data,
+                    self._photo_metadata((await session.get(Resume, preview.source_id)).processed_data),
+                )
             result = copy.deepcopy(response_data)
             result.update(
                 resume_id=row.resume_id,
@@ -1003,6 +1146,8 @@ class Database:
             )
             session.add(row)
             await session.flush()
+            if source_photo is not None:
+                session.add(self._copy_photo_row(source_photo, row.resume_id))
             session.add(
                 Improvement(
                     request_id=result["request_id"],
@@ -1041,6 +1186,13 @@ class Database:
         async with self._write_session() as session:
             session.add(row)
             await session.flush()
+            source_photo = await session.get(ResumePhoto, original_resume_id)
+            if source_photo is not None:
+                origin = await session.get(Resume, original_resume_id)
+                row.processed_data = self._with_photo_metadata(
+                    row.processed_data, self._photo_metadata(origin.processed_data),
+                )
+                session.add(self._copy_photo_row(source_photo, row.resume_id))
             session.add(
                 Improvement(
                     request_id=request_id,

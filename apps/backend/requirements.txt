@@ -13,7 +13,9 @@ PyJWT[crypto]==2.15.1
 litellm==1.109.1
 markitdown[docx,pdf]==0.1.9
 pdfminer.six==20260107
+pypdf==6.21.4
 python-docx==1.2.0
+Pillow==13.0.0
 playwright==1.64.1
 python-dotenv==1.2.4
 mcp==2.3.0

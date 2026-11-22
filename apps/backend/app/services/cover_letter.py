@@ -1,6 +1,8 @@
 """Cover letter, outreach message, and resume title generation service."""
 
 import json
+
+from app.services.resume_photo import strip_photo_metadata
 import logging
 from typing import Any
 
@@ -59,7 +61,7 @@ async def generate_cover_letter(
     try:
         prompt = template.format(
             job_description=job_description,
-            resume_data=json.dumps(resume_data),
+            resume_data=json.dumps(strip_photo_metadata(resume_data)),
             output_language=output_language,
         )
     except (KeyError, IndexError, ValueError) as e:
@@ -77,7 +79,7 @@ async def generate_cover_letter(
         )
         prompt = COVER_LETTER_PROMPT.format(
             job_description=job_description,
-            resume_data=json.dumps(resume_data),
+            resume_data=json.dumps(strip_photo_metadata(resume_data)),
             output_language=output_language,
         )
 
@@ -114,7 +116,7 @@ async def generate_outreach_message(
     try:
         prompt = template.format(
             job_description=job_description,
-            resume_data=json.dumps(resume_data),
+            resume_data=json.dumps(strip_photo_metadata(resume_data)),
             output_language=output_language,
         )
     except (KeyError, IndexError, ValueError) as e:
@@ -127,7 +129,7 @@ async def generate_outreach_message(
         )
         prompt = OUTREACH_MESSAGE_PROMPT.format(
             job_description=job_description,
-            resume_data=json.dumps(resume_data),
+            resume_data=json.dumps(strip_photo_metadata(resume_data)),
             output_language=output_language,
         )
 
@@ -163,7 +165,7 @@ async def generate_follow_up_email(
     prompt = FOLLOW_UP_EMAIL_PROMPT.format(
         application_context="\n".join(context),
         job_description=job_description,
-        resume_data=json.dumps(resume_data),
+        resume_data=json.dumps(strip_photo_metadata(resume_data)),
         output_language=get_language_name(language),
     )
     result = await complete(

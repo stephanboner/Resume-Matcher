@@ -36,6 +36,7 @@ function resolveRuntimeApiBase(apiBase: string): string {
 
 export const API_URL = normalizeApiUrl(process.env.NEXT_PUBLIC_API_URL ?? DEFAULT_PUBLIC_API_URL);
 export const API_BASE = resolveRuntimeApiBase(toApiBase(API_URL));
+export const PUBLIC_API_BASE = toApiBase(API_URL);
 
 // Default request timeout (ms). MUST match the backend's REQUEST_TIMEOUT_SECONDS
 // and the Next.js proxyTimeout (next.config.ts) — the shortest layer aborts

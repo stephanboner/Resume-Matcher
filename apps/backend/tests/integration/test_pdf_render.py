@@ -224,6 +224,20 @@ class TestRenderPageWaitStrategy:
         marker.get_attribute.assert_awaited_with("data-print-error")
         page.pdf.assert_not_awaited()
 
+    async def test_print_media_is_set_before_loading_document(self):
+        """Print layout must be active before portrait geometry is measured."""
+        page = AsyncMock()
+        page.pdf.return_value = b"%PDF-1.4 fake"
+        await _render_page_to_pdf(
+            page, "http://f/print/resumes/test", ".resume-print", "A4",
+            {"top": "10mm", "right": "10mm"},
+        )
+        page.emulate_media.assert_awaited_once_with(media="print")
+        names = [entry[0] for entry in page.mock_calls]
+        assert names.index("emulate_media") < names.index("goto")
+        page.evaluate.assert_not_awaited()
+        assert names.index("goto") < names.index("pdf")
+
     async def test_still_waits_for_fonts_bounded(self):
         """Fonts must be loaded before snapshot (else text renders unstyled), and
         the wait must be bounded by the nav timeout — not Playwright's default."""

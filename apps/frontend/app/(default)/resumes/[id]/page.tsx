@@ -626,6 +626,7 @@ export default function ResumeViewerPage() {
         <div className="flex justify-center pb-4">
           <div className="no-print w-full max-w-[250mm] border border-ink">
             <PaginatedPreview
+              resumeId={resumeId}
               resumeData={localizedResumeData || resumeData}
               settings={templateSettings}
             />
@@ -634,6 +635,7 @@ export default function ResumeViewerPage() {
               instead of the paginated preview and its controls. */}
           <div className="resume-print hidden print:block">
             <Resume
+              resumeId={resumeId}
               resumeData={localizedResumeData || resumeData}
               template={templateSettings.template}
               settings={templateSettings}

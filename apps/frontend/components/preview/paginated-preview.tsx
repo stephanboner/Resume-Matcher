@@ -16,10 +16,12 @@ import { usePagination } from './use-pagination';
 import { PAGE_DIMENSIONS, mmToPx, getContentAreaPx } from '@/lib/constants/page-dimensions';
 import { useTranslations } from '@/lib/i18n';
 import { useLanguage } from '@/lib/context/language-context';
+import { getResumePhotoUrl } from '@/lib/api/resume';
 
 interface PaginatedPreviewProps {
   resumeData: ResumeData;
   settings: TemplateSettings;
+  resumeId?: string;
 }
 
 const MIN_ZOOM = 0.4;
@@ -32,7 +34,7 @@ const ZOOM_STEP = 0.1;
  * PaginatedPreview shows a WYSIWYG preview of the resume with actual page dimensions,
  * margin guides, and automatic pagination.
  */
-export function PaginatedPreview({ resumeData, settings }: PaginatedPreviewProps) {
+export function PaginatedPreview({ resumeData, settings, resumeId }: PaginatedPreviewProps) {
   const { t } = useTranslations();
   // Orders the CJK font fallback so the preview matches the generated PDF.
   const { contentLanguage } = useLanguage();
@@ -41,6 +43,14 @@ export function PaginatedPreview({ resumeData, settings }: PaginatedPreviewProps
   const [zoom, setZoom] = useState(DEFAULT_ZOOM);
   const [showMargins, setShowMargins] = useState(false);
   const [autoZoom, setAutoZoom] = useState(true);
+  const photo = resumeData.personalInfo?.photo;
+  const paperPortrait = settings.template === 'modern-deedy' && resumeId && photo && photo.visible !== false
+    ? {
+        url: getResumePhotoUrl(resumeId, photo.version),
+        alt: `${resumeData.personalInfo?.name ?? ''} profile photo`.trim(),
+        size: Math.max(120, photo.size),
+      }
+    : undefined;
   const resumeSettings: TemplateSettings = {
     ...settings,
     margins: { top: 0, bottom: 0, left: 0, right: 0 },
@@ -195,6 +205,8 @@ export function PaginatedPreview({ resumeData, settings }: PaginatedPreviewProps
           inert
         >
           <Resume
+            resumeId={resumeId}
+            renderProfilePhoto={!paperPortrait}
             resumeData={resumeData}
             template={settings.template}
             settings={resumeSettings}
@@ -227,8 +239,11 @@ export function PaginatedPreview({ resumeData, settings }: PaginatedPreviewProps
                 showMarginGuides={showMargins}
                 contentOffset={page.contentOffset}
                 contentEnd={page.contentEnd}
+                pagePortrait={index === 0 ? paperPortrait : undefined}
               >
                 <Resume
+                  resumeId={index === 0 ? resumeId : undefined}
+                  renderProfilePhoto={!paperPortrait}
                   resumeData={resumeData}
                   template={settings.template}
                   settings={resumeSettings}
