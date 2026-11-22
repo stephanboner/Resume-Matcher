@@ -52,6 +52,7 @@ export interface PhotoMutation {
   cropWidth: number;
   cropHeight: number;
   size: number;
+  visible?: boolean;
 }
 
 export interface ResumePhotoSettings extends PhotoMutation {
