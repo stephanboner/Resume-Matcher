@@ -472,8 +472,11 @@ async def _render_page_to_pdf(
     # Wait for any server-managed resume photos to decode before capturing the page.
     await _await_before_deadline(
         page.wait_for_function(
-            """() => Array.from(document.querySelectorAll('[data-photo-overlay] img')).every(
-                (img) => img.complete && img.naturalWidth > 0
+            """() => Array.from(document.querySelectorAll('[data-photo-overlay]')).every(
+                (overlay) => overlay.getAttribute('data-photo-fit-ready') !== 'false'
+                    && Array.from(overlay.querySelectorAll('img')).every(
+                        (img) => img.complete && img.naturalWidth > 0
+                    )
             )""",
             timeout=_stage_timeout_ms(work_deadline),
         ),

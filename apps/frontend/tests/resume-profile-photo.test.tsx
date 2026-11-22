@@ -8,6 +8,7 @@ import {
 } from '@/components/resume/resume-profile-photo';
 import type { ResumePhotoSettings } from '@/components/dashboard/resume-component';
 import { fitSquarePhotoAroundText, fitSquarePhotoBeforeSection } from '@/lib/utils/resume-photo-fit';
+import { getPhotoTopShiftPx, getPagePhotoTopPx } from '@/lib/utils/resume-photo-page';
 
 vi.mock('@/lib/api/resume', () => ({
   getResumePhotoUrl: (resumeId: string, version: number) =>
@@ -61,17 +62,25 @@ describe('resume photo layout', () => {
     expect(container.textContent).toBe('Resume content');
   });
 
-  it('pins Modern Deedy photos inside the top-right content corner', () => {
+  it('pins print photos into the page top margin rather than over the summary', () => {
     const css = readFileSync(
       join(process.cwd(), 'components/resume/styles/resume-profile-photo.module.css'),
       'utf8'
     );
     const placement = css.match(/\.modernDeedy\s+\.photo\s*\{([^}]*)\}/)?.[1] ?? '';
-    expect(placement).toMatch(/top:\s*0\s*;/);
+    expect(placement).toMatch(/top:\s*calc\(-1 \* var\(--resume-profile-photo-top-shift/);
     expect(placement).toMatch(/right:\s*0\s*;/);
-    expect(placement).not.toMatch(/calc\(|margin|padding|transform/);
+    expect(placement).not.toMatch(/padding|transform/);
     const image = css.match(/\.modernDeedy\s+\.image\s*\{([^}]*)\}/)?.[1] ?? '';
     expect(image).toMatch(/object-position:\s*center top\s*;/);
+  });
+
+  it('uses the physical paper margin and keeps the photo inside the page', () => {
+    expect(getPhotoTopShiftPx(10)).toBe(32);
+    expect(getPagePhotoTopPx(10)).toBeGreaterThanOrEqual(6);
+    expect(getPagePhotoTopPx(10)).toBeLessThan(10 * 96 / 25.4);
+    expect(getPagePhotoTopPx(5)).toBeGreaterThanOrEqual(6);
+    expect(getPhotoTopShiftPx(5)).toBeLessThan(32);
   });
 
   it('shrinks the square only enough to avoid the first summary line', () => {

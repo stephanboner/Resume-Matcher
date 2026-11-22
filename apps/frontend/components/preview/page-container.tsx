@@ -49,6 +49,7 @@ export function PageContainer({
   const paperRef = useRef<HTMLDivElement>(null);
   const [fittedPortraitSize, setFittedPortraitSize] = useState<number | null>(null);
   const [portraitFailed, setPortraitFailed] = useState(false);
+  React.useEffect(() => setPortraitFailed(false), [pagePortrait?.url]);
   const pageDims = PAGE_DIMENSIONS[pageSize];
   const pageWidthPx = mmToPx(pageDims.width);
   const pageHeightPx = mmToPx(pageDims.height);
@@ -78,7 +79,9 @@ export function PageContainer({
     const measure = () => {
       if (!active) return;
       const paperRect = paper.getBoundingClientRect();
-      const pageScale = paperRect.width > 0 ? paperRect.width / pageWidthPx : scale;
+      // Hidden/test canvases have no geometry; keep the requested photo size.
+      if (paperRect.width <= 0 || paperRect.height <= 0) return;
+      const pageScale = paperRect.width / pageWidthPx;
       if (!Number.isFinite(pageScale) || pageScale <= 0) return;
       const firstSection = paper.querySelector<HTMLElement>('[data-resume-section]');
       // If the resume has no sections (a blank CV), don't invent a constraint.
