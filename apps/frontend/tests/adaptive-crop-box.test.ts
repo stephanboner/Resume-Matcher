@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   moveCrop,
   resizeCrop,
+  resizeSquareCrop,
+  toSquareCrop,
   type CropHandle,
   type CropRect,
 } from '@/components/builder/adaptive-crop-box';
@@ -52,6 +54,42 @@ describe('adaptive crop geometry', () => {
       expect(resizeCrop(crop, handle, dx, dy)).toEqual(expected);
     }
   );
+
+  it('creates a true square in image pixels from rectangular source images', () => {
+    const landscape = toSquareCrop({ cropX: 0, cropY: 0, cropWidth: 100, cropHeight: 100 }, 1.5);
+    expect(landscape.cropWidth).toBeCloseTo(100 / 1.5);
+    expect(landscape.cropHeight).toBeCloseTo(100);
+    expect(landscape.cropX).toBeCloseTo(100 / 6);
+    expect(landscape.cropY).toBeCloseTo(0);
+
+    const portrait = toSquareCrop({ cropX: 0, cropY: 0, cropWidth: 100, cropHeight: 100 }, 0.75);
+    expect(portrait.cropWidth).toBeCloseTo(100);
+    expect(portrait.cropHeight).toBeCloseTo(75);
+    expect(portrait.cropY).toBeCloseTo(12.5);
+  });
+
+  it('locks corner and edge resizing to the actual square image ratio', () => {
+    const square: CropRect = { cropX: 20, cropY: 20, cropWidth: 40, cropHeight: 60 };
+    const corner = resizeSquareCrop(square, 'se', 10, 0, 1.5);
+    expect(corner.cropX).toBeCloseTo(20);
+    expect(corner.cropY).toBeCloseTo(20);
+    expect(corner.cropWidth).toBeCloseTo(50);
+    expect(corner.cropHeight).toBeCloseTo(75);
+
+    const edge = resizeSquareCrop(square, 'w', -10, 0, 1.5);
+    expect(edge.cropWidth).toBeCloseTo(50);
+    expect(edge.cropHeight).toBeCloseTo(75);
+    expect(edge.cropX).toBeCloseTo(10);
+    expect(edge.cropY).toBeCloseTo(12.5);
+
+    for (const resized of [corner, edge, resizeSquareCrop(square, 'nw', -100, -100, 1.5)]) {
+      expect(resized.cropWidth * 1.5).toBeCloseTo(resized.cropHeight);
+      expect(resized.cropX).toBeGreaterThanOrEqual(0);
+      expect(resized.cropY).toBeGreaterThanOrEqual(0);
+      expect(resized.cropX + resized.cropWidth).toBeLessThanOrEqual(100.000001);
+      expect(resized.cropY + resized.cropHeight).toBeLessThanOrEqual(100.000001);
+    }
+  });
 
   it('enforces a five-percent minimum edge and image bounds', () => {
     expect(resizeCrop(crop, 'e', -100, 0).cropWidth).toBe(5);
