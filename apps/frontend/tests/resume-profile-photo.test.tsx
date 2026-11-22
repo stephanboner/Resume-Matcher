@@ -105,7 +105,7 @@ describe('resume photo layout', () => {
     expect(fitSquarePhotoAroundText(
       120,
       { top: 100, right: 1300 },
-      [{ left: 1100, right: 1300, top: 108, bottom: 190 }]
+      [{ left: 1100, right: 1300, top: 100, bottom: 190 }]
     )).toBe(0);
   });
 
