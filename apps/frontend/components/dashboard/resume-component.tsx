@@ -184,6 +184,7 @@ interface ResumeProps {
   template?: TemplateType;
   renderProfilePhoto?: boolean;
   photoMarginTopMm?: number;
+  photoMarginRightMm?: number;
   settings?: TemplateSettings;
   additionalSectionLabels?: Partial<AdditionalSectionLabels>;
   sectionHeadings?: Partial<ResumeSectionHeadings>;
@@ -213,6 +214,7 @@ const Resume: React.FC<ResumeProps> = ({
   template = 'swiss-single',
   renderProfilePhoto = true,
   photoMarginTopMm,
+  photoMarginRightMm,
   settings,
   additionalSectionLabels,
   sectionHeadings,
@@ -244,6 +246,7 @@ const Resume: React.FC<ResumeProps> = ({
       template={mergedSettings.template}
       renderPhoto={renderProfilePhoto}
       photoMarginTopMm={photoMarginTopMm ?? settings?.margins?.top ?? 10}
+      photoMarginRightMm={photoMarginRightMm ?? settings?.margins?.right ?? 10}
       editLabel="Edit photo"
       profilePhotoLabel="Profile photo"
     >
