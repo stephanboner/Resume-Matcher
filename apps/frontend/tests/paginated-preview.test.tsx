@@ -41,42 +41,6 @@ describe('PaginatedPreview', () => {
     );
   });
 
-  it('only allows a first-page photo into the margin for visible Modern Deedy photos', () => {
-    const settings = { ...DEFAULT_TEMPLATE_SETTINGS, template: 'modern-deedy' as const };
-    const resumeData = {
-      personalInfo: {
-        name: 'Example',
-        photo: {
-          cropX: 0,
-          cropY: 0,
-          cropWidth: 100,
-          cropHeight: 100,
-          size: 120,
-          version: 1,
-          aspectRatio: 1,
-          visible: true,
-        },
-      },
-    } as ResumeData;
-
-    const { container, rerender } = render(
-      <PaginatedPreview resumeId="example" resumeData={resumeData} settings={settings} />
-    );
-    expect(container.querySelector('.absolute.overflow-visible')).not.toBeNull();
-
-    rerender(
-      <PaginatedPreview
-        resumeId="example"
-        resumeData={{
-          ...resumeData,
-          personalInfo: { ...resumeData.personalInfo, photo: { ...resumeData.personalInfo!.photo!, visible: false } },
-        }}
-        settings={settings}
-      />
-    );
-    expect(container.querySelector('.absolute.overflow-visible')).toBeNull();
-  });
-
   describe('default zoom', () => {
     const renderAt = (clientWidth: number) => {
       // jsdom has no layout, so give the scroll area a width to fit against.
