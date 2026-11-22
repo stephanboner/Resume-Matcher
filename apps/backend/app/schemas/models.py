@@ -273,7 +273,7 @@ class PersonalInfo(BaseModel):
     website: str | None = None
     linkedin: str | None = None
     github: str | None = None
-    photo: PhotoSettings | None = None
+    photo: PhotoSettings | None = Field(default=None, exclude_if=lambda value: value is None)
 
 
 class Experience(BaseModel):

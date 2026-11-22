@@ -275,13 +275,14 @@ class Database:
     def _with_photo_metadata(data: dict[str, Any] | None, photo: dict[str, Any] | None) -> dict[str, Any]:
         result = copy.deepcopy(data) if isinstance(data, dict) else {}
         personal = result.get("personalInfo")
+        if photo is None:
+            if isinstance(personal, dict):
+                personal.pop("photo", None)
+            return result
         if not isinstance(personal, dict):
             personal = {}
             result["personalInfo"] = personal
-        if photo is None:
-            personal.pop("photo", None)
-        else:
-            personal["photo"] = copy.deepcopy(photo)
+        personal["photo"] = copy.deepcopy(photo)
         return result
 
     @staticmethod
