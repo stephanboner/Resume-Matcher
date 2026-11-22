@@ -30,6 +30,8 @@ from playwright.async_api import (
     TimeoutError as PlaywrightTimeoutError,
 )
 
+from app.services.pdf_photo_layout import PRINT_PHOTO_LAYOUT_JS
+
 logger = logging.getLogger(__name__)
 
 _T = TypeVar("_T")
@@ -424,6 +426,17 @@ async def _render_page_to_pdf(
     if work_deadline is None:
         work_deadline = asyncio.get_running_loop().time() + (_NAV_TIMEOUT_MS / 1000)
 
+    # Chromium normally uses screen media until page.pdf() is called.
+    # Dynamic photo measurements must use the same print layout as the PDF,
+    # otherwise the portrait can jump, overlap the text, or be clipped.
+    emulate_media = getattr(page, "emulate_media", None)
+    if callable(emulate_media):
+        await _await_before_deadline(
+            emulate_media(media="print"),
+            work_deadline,
+            "print-media setup",
+        )
+
     response = await _await_before_deadline(
         page.goto(
             url,
@@ -493,6 +506,25 @@ async def _render_page_to_pdf(
         work_deadline,
         "font readiness",
     )
+    # Calibrate the Modern Deedy photo against the final print DOM, *after*
+    # fonts have loaded. This runs only on actual resume print pages. The
+    # preview uses a separate paper layer, but both are anchored 4mm from the
+    # physical sheet's top/right edges. No text or page margins are changed.
+    if "/print/resumes/" in url:
+        evaluate = getattr(page, "evaluate", None)
+        if callable(evaluate):
+            await _await_before_deadline(
+                evaluate(
+                    PRINT_PHOTO_LAYOUT_JS,
+                    {
+                        "topMargin": pdf_margins.get("top", "10mm"),
+                        "rightMargin": pdf_margins.get("right", "10mm"),
+                    },
+                ),
+                work_deadline,
+                "profile photo print alignment",
+            )
+
     return await _await_before_deadline(
         page.pdf(
             format=pdf_format,
