@@ -282,6 +282,7 @@ export default async function PrintResumePage({ params, searchParams }: PageProp
       />
       <Resume
         resumeId={resolvedParams.id}
+        photoMarginTopMm={settings.margins.top}
         resumeData={localizedResumeData}
         template={settings.template}
         settings={printSettings}

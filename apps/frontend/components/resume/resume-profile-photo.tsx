@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type 
 import type { ResumePhotoSettings } from '@/components/dashboard/resume-component';
 import { getResumePhotoUrl } from '@/lib/api/resume';
 import { fitSquarePhotoAroundText, fitSquarePhotoBeforeSection, type PhotoTextRect } from '@/lib/utils/resume-photo-fit';
+import { getPhotoTopShiftPx } from '@/lib/utils/resume-photo-page';
 import styles from './styles/resume-profile-photo.module.css';
 
 interface ResumeProfilePhotoProps {
@@ -73,6 +74,8 @@ interface ResumePhotoLayoutProps {
   name?: string;
   photo?: ResumePhotoSettings;
   template?: string;
+  renderPhoto?: boolean;
+  photoMarginTopMm?: number;
   editable?: boolean;
   editLabel?: string;
   profilePhotoLabel?: string;
@@ -85,6 +88,8 @@ export function ResumePhotoLayout({
   name = '',
   photo,
   template,
+  renderPhoto = true,
+  photoMarginTopMm = 10,
   editable,
   editLabel,
   profilePhotoLabel,
@@ -92,9 +97,11 @@ export function ResumePhotoLayout({
 }: ResumePhotoLayoutProps) {
   const [loadFailed, setLoadFailed] = useState(false);
   const [safePhotoSize, setSafePhotoSize] = useState<number | null>(null);
+  const [photoFitReady, setPhotoFitReady] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const modernDeedy = template === 'modern-deedy';
-  const photoVisible = Boolean(resumeId && photo && photo.visible !== false && !loadFailed);
+  const photoVisible = Boolean(renderPhoto && resumeId && photo && photo.visible !== false && !loadFailed);
+  const topShiftPx = getPhotoTopShiftPx(photoMarginTopMm);
   // Try to keep the requested large square, but never sacrifice the underlying text.
   const desiredSize = modernDeedy ? Math.max(120, photo?.size ?? 120) : photo?.size ?? 88;
 
@@ -118,38 +125,39 @@ export function ResumePhotoLayout({
       // Measure actual rendered text lines, not the broad full-width section boxes.
       // This leaves empty header space available and catches wrapped summary lines.
       const lines: PhotoTextRect[] = [];
-      const walker = document.createTreeWalker(textRoot, NodeFilter.SHOW_TEXT);
       const range = document.createRange();
-      // jsdom and a few embedded renderers lack Range.getClientRects().
-      if (typeof range.getClientRects !== 'function') return;
-      let node: Node | null;
-      while ((node = walker.nextNode())) {
-        if (!node.textContent?.trim()) continue;
-        range.selectNodeContents(node);
-        for (const rect of Array.from(range.getClientRects())) {
-          if (rect.width > 0 && rect.height > 0) {
-            lines.push({ left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom });
+      // The heading/section boundary check also works in test environments
+      // where Range.getClientRects is unavailable.
+      if (typeof range.getClientRects === 'function') {
+        const walker = document.createTreeWalker(textRoot, NodeFilter.SHOW_TEXT);
+        let node: Node | null;
+        while ((node = walker.nextNode())) {
+          if (!node.textContent?.trim()) continue;
+          range.selectNodeContents(node);
+          for (const rect of Array.from(range.getClientRects())) {
+            if (rect.width > 0 && rect.height > 0) {
+              lines.push({ left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom });
+            }
           }
         }
       }
       range.detach?.();
 
+      const portraitTop = frame.top - topShiftPx * scale;
       const collisionSafeSize = fitSquarePhotoAroundText(
-        desiredSize, { top: frame.top, right: frame.right }, lines, scale
+        desiredSize, { top: portraitTop, right: frame.right }, lines, scale
       );
 
       // A short heading such as SUMMARY may sit entirely left of the portrait,
       // yet the portrait must not extend into that section's vertical area.
       // Reserve a gap before the first section WITHOUT changing any text positions.
-      const firstSection = textRoot.querySelector<HTMLElement>('[data-resume-section]');
+      const firstSection = wrapper.querySelector<HTMLElement>('[data-resume-section]');
       const sectionSafeSize = fitSquarePhotoBeforeSection(
-        desiredSize,
-        frame.top,
-        firstSection?.getBoundingClientRect().top,
-        scale
+        desiredSize, portraitTop, firstSection?.getBoundingClientRect().top, scale
       );
       const fitted = Math.min(collisionSafeSize, sectionSafeSize);
       setSafePhotoSize((previous) => previous === fitted ? previous : fitted);
+      setPhotoFitReady(true);
     };
 
     measure();
@@ -163,21 +171,22 @@ export function ResumePhotoLayout({
       observer?.disconnect();
       window.removeEventListener('resize', measure);
     };
-  });
+  }, [modernDeedy, photoVisible, desiredSize, topShiftPx]);
 
-  if (!resumeId || !photo || photo.visible === false || loadFailed) {
+  if (!renderPhoto || !resumeId || !photo || photo.visible === false || loadFailed) {
     return <>{children}</>;
   }
 
   const displaySize = modernDeedy ? Math.min(desiredSize, safePhotoSize ?? desiredSize) : photo.size;
   const layoutStyle: CSSProperties | undefined = modernDeedy
-    ? ({ '--resume-profile-photo-size': `${displaySize}px` } as CSSProperties)
+    ? ({ '--resume-profile-photo-size': `${displaySize}px`, '--resume-profile-photo-top-shift': `${topShiftPx}px` } as CSSProperties)
     : undefined;
 
   return (
     <div
       ref={wrapperRef}
       data-photo-overlay="true"
+      data-photo-fit-ready={!modernDeedy || photoFitReady ? "true" : "false"}
       className={`${styles.wrapper} ${modernDeedy ? styles.modernDeedy : ''}`}
       style={layoutStyle}
     >

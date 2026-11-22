@@ -33,10 +33,11 @@
   }
 }
 
-/* Pin the portrait to the top-right of the resume content (not above it).
-   Absolute positioning keeps the header and subsequent sections unchanged. */
+/* Lift the first-page portrait INTO the paper's top margin, not outside
+   the physical sheet. The margin-controlled offset is shared with preview
+   page-level coordinates, so the CV header and sections stay untouched. */
 .modernDeedy .photo {
-  top: 0;
+  top: calc(-1 * var(--resume-profile-photo-top-shift, 32px));
   right: 0;
 }
 
