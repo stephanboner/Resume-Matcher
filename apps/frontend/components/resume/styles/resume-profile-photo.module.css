@@ -33,9 +33,11 @@
   }
 }
 
-/* Modern Deedy aligns the portrait with the top of its header. */
+/* Keep the portrait's bottom edge where the original 88px photo ended.
+   Enlarging it expands upward into the page margin, not into the first section,
+   and never changes the layout geometry of the header/body text. */
 .modernDeedy .photo {
-  top: 0;
+  top: calc(88px - var(--resume-profile-photo-size, 120px));
 }
 
 .modernDeedy .image {
