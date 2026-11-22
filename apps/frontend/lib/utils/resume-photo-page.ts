@@ -1,15 +1,35 @@
 import { mmToPx } from '@/lib/constants/page-dimensions';
 
 /**
- * Portraits are positioned relative to the physical paper, including its
- * top margin. Keep at least 5px inside the sheet to avoid print clipping.
- * Never modify the document margins or the CV's text flow.
+ * Anchor the photo to the physical top-right corner of the sheet, rather
+ * than the CV text margins. Four millimetres provides a practical print inset.
  */
-export function getPhotoTopShiftPx(marginTopMm: number): number {
-  const marginTopPx = mmToPx(Number.isFinite(marginTopMm) ? marginTopMm : 10);
-  return Math.max(0, Math.min(32, marginTopPx - 5));
+export const PHOTO_PAGE_INSET_MM = 4;
+
+function safeMarginPx(marginMm: number): number {
+  return mmToPx(Number.isFinite(marginMm) ? Math.max(0, marginMm) : 10);
 }
 
+function photoShiftPx(marginMm: number): number {
+  return Math.max(0, safeMarginPx(marginMm) - mmToPx(PHOTO_PAGE_INSET_MM));
+}
+
+/** How far to lift the print photo above the content's top edge. */
+export function getPhotoTopShiftPx(marginTopMm: number): number {
+  return photoShiftPx(marginTopMm);
+}
+
+/** How far to shift the print photo right of the text content edge. */
+export function getPhotoRightShiftPx(marginRightMm: number): number {
+  return photoShiftPx(marginRightMm);
+}
+
+/** Offset from the physical top sheet edge for the paginated preview. */
 export function getPagePhotoTopPx(marginTopMm: number): number {
-  return mmToPx(marginTopMm) - getPhotoTopShiftPx(marginTopMm);
+  return safeMarginPx(marginTopMm) - getPhotoTopShiftPx(marginTopMm);
+}
+
+/** Offset from the physical right sheet edge for the paginated preview. */
+export function getPagePhotoRightPx(marginRightMm: number): number {
+  return safeMarginPx(marginRightMm) - getPhotoRightShiftPx(marginRightMm);
 }
