@@ -247,7 +247,7 @@ class PhotoMutation(BaseModel):
     cropY: float = Field(ge=0, le=100)
     cropWidth: float = Field(gt=0, le=100)
     cropHeight: float = Field(gt=0, le=100)
-    size: int = Field(ge=64, le=112)
+    size: int = Field(ge=64, le=144)
     visible: bool = True
 
     @model_validator(mode="after")
