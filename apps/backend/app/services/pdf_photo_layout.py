@@ -9,7 +9,7 @@ the browser may reflow after we have chosen a size, producing a different PDF.
 # Evaluated only for pages carrying the Modern Deedy photo overlay.
 PRINT_PHOTO_LAYOUT_JS = r"""
 ({ topMargin, rightMargin }) => {
-  const overlay = document.querySelector('.resume-print [data-photo-overlay].modern-deedy-photo');
+  const overlay = document.querySelector('.resume-print [data-photo-overlay][data-photo-template="modern-deedy"]');
   if (!overlay) return null;
 
   const photo = overlay.querySelector('.resume-profile-photo');
