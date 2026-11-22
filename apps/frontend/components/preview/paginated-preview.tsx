@@ -20,6 +20,7 @@ import { useLanguage } from '@/lib/context/language-context';
 interface PaginatedPreviewProps {
   resumeData: ResumeData;
   settings: TemplateSettings;
+  resumeId?: string;
 }
 
 const MIN_ZOOM = 0.4;
@@ -32,7 +33,7 @@ const ZOOM_STEP = 0.1;
  * PaginatedPreview shows a WYSIWYG preview of the resume with actual page dimensions,
  * margin guides, and automatic pagination.
  */
-export function PaginatedPreview({ resumeData, settings }: PaginatedPreviewProps) {
+export function PaginatedPreview({ resumeData, settings, resumeId }: PaginatedPreviewProps) {
   const { t } = useTranslations();
   // Orders the CJK font fallback so the preview matches the generated PDF.
   const { contentLanguage } = useLanguage();
@@ -195,6 +196,7 @@ export function PaginatedPreview({ resumeData, settings }: PaginatedPreviewProps
           inert
         >
           <Resume
+            resumeId={resumeId}
             resumeData={resumeData}
             template={settings.template}
             settings={resumeSettings}
@@ -229,6 +231,7 @@ export function PaginatedPreview({ resumeData, settings }: PaginatedPreviewProps
                 contentEnd={page.contentEnd}
               >
                 <Resume
+                  resumeId={index === 0 ? resumeId : undefined}
                   resumeData={resumeData}
                   template={settings.template}
                   settings={resumeSettings}
