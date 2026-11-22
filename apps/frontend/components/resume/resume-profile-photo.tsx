@@ -87,7 +87,7 @@ export function ResumePhotoLayout({
     setLoadFailed(false);
   }, [resumeId, photo?.version]);
 
-  if (!resumeId || !photo || loadFailed) {
+  if (!resumeId || !photo || photo.visible === false || loadFailed) {
     return <>{children}</>;
   }
 
