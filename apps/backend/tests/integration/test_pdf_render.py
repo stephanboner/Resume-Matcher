@@ -235,23 +235,8 @@ class TestRenderPageWaitStrategy:
         page.emulate_media.assert_awaited_once_with(media="print")
         names = [entry[0] for entry in page.mock_calls]
         assert names.index("emulate_media") < names.index("goto")
-        assert names.index("evaluate") < names.index("pdf")
-
-    async def test_resumes_calibrate_photo_after_fonts_before_pdf(self):
-        """Pass real print margins to the final per-resume photo placement step."""
-        page = AsyncMock()
-        page.pdf.return_value = b"%PDF-1.4 fake"
-        await _render_page_to_pdf(
-            page, "http://f/print/resumes/test", ".resume-print", "A4",
-            {"top": "12mm", "right": "9mm"},
-        )
-        page.evaluate.assert_awaited_once()
-        script, margins = page.evaluate.await_args.args
-        assert "data-photo-template" in script
-        assert "GAP_BEFORE_SECTION = 3" in script
-        assert margins == {"topMargin": "12mm", "rightMargin": "9mm"}
-        names = [entry[0] for entry in page.mock_calls]
-        assert names.index("evaluate") < names.index("pdf")
+        page.evaluate.assert_not_awaited()
+        assert names.index("goto") < names.index("pdf")
 
     async def test_still_waits_for_fonts_bounded(self):
         """Fonts must be loaded before snapshot (else text renders unstyled), and
