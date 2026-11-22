@@ -205,6 +205,33 @@ export function ProfilePhotoField({
             </Button>
             <Button
               type="button"
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                setApplying(true);
+                setError(null);
+                try {
+                  await onEdit({
+                    cropX: photo.cropX,
+                    cropY: photo.cropY,
+                    cropWidth: photo.cropWidth,
+                    cropHeight: photo.cropHeight,
+                    size: photo.size,
+                    visible: photo.visible === false,
+                  });
+                } catch (cause) {
+                  console.error('Failed to toggle photo visibility:', cause);
+                  setError(t('resume.photo.errors.save'));
+                } finally {
+                  setApplying(false);
+                }
+              }}
+              disabled={disabled || applying}
+            >
+              {photo.visible === false ? t('resume.photo.show') : t('resume.photo.hide')}
+            </Button>
+            <Button
+              type="button"
               variant="destructive"
               size="sm"
               onClick={() => setRemoveOpen(true)}
