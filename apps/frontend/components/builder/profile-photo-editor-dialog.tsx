@@ -15,7 +15,9 @@ import type { PhotoMutation, ResumePhotoSettings } from '@/components/dashboard/
 import { AdaptiveCropBox, type CropRect } from '@/components/builder/adaptive-crop-box';
 import { useTranslations } from '@/lib/i18n';
 
-const DEFAULT_SIZE = 88;
+const DEFAULT_SIZE = 120;
+const MIN_SQUARE_SIZE = 120;
+const MAX_SIZE = 144;
 const FULL_IMAGE_CROP: CropRect = {
   cropX: 0,
   cropY: 0,
@@ -27,6 +29,7 @@ interface ProfilePhotoEditorDialogProps {
   open: boolean;
   sourceUrl: string | null;
   initialSettings?: ResumePhotoSettings;
+  squarePhoto?: boolean;
   applying?: boolean;
   error?: string | null;
   onOpenChange: (open: boolean) => void;
@@ -37,13 +40,14 @@ export function ProfilePhotoEditorDialog({
   open,
   sourceUrl,
   initialSettings,
+  squarePhoto = false,
   applying = false,
   error,
   onOpenChange,
   onApply,
 }: ProfilePhotoEditorDialogProps) {
   const { t } = useTranslations();
-  const [size, setSize] = useState(initialSettings?.size ?? DEFAULT_SIZE);
+  const [size, setSize] = useState(Math.max(squarePhoto ? MIN_SQUARE_SIZE : 64, initialSettings?.size ?? DEFAULT_SIZE));
   const [crop, setCrop] = useState<CropRect>(FULL_IMAGE_CROP);
 
   const initialCrop = useMemo<CropRect>(() => {
@@ -59,8 +63,8 @@ export function ProfilePhotoEditorDialog({
   useEffect(() => {
     if (!open) return;
     setCrop(initialCrop);
-    setSize(initialSettings?.size ?? DEFAULT_SIZE);
-  }, [initialCrop, initialSettings?.size, open]);
+    setSize(Math.max(squarePhoto ? MIN_SQUARE_SIZE : 64, initialSettings?.size ?? DEFAULT_SIZE));
+  }, [initialCrop, initialSettings?.size, open, squarePhoto]);
 
   const handleReset = () => {
     setCrop(FULL_IMAGE_CROP);
@@ -127,8 +131,8 @@ export function ProfilePhotoEditorDialog({
               <input
                 aria-label={t('resume.photo.size')}
                 type="range"
-                min="64"
-                max="112"
+                min={squarePhoto ? MIN_SQUARE_SIZE : 64}
+                max={MAX_SIZE}
                 step="1"
                 value={size}
                 onChange={(event) => setSize(Number(event.target.value))}
