@@ -32,21 +32,14 @@
   margin-bottom: var(--section-gap);
 }
 
+/* Photo stays a separate absolute overlay. Text and the following sections retain
+   the exact same vertical spacing and full available width as the no-photo resume. */
 .headerWithPhoto {
-  /* Keep the first CV section below the full photo, and the header text beside it. */
   text-align: left;
-  padding-right: calc(var(--resume-profile-photo-size, 120px) + 20px);
-  min-height: var(--resume-profile-photo-size, 120px);
 }
 
 .headerWithPhoto .contactRow {
   justify-content: flex-start;
-  /* Photo headers can wrap over two lines: use spacing rather than orphaned pipes. */
-  gap: 0.25em 0.85em;
-}
-
-.headerWithPhoto .contactRow > .pipe {
-  display: none;
 }
 
 .name {
