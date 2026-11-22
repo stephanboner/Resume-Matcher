@@ -71,6 +71,7 @@ export function ProfilePhotoEditorDialog({
     await onApply({
       ...crop,
       size,
+      visible: initialSettings?.visible !== false,
     });
   };
 
