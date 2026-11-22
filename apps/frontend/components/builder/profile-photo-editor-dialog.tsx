@@ -15,7 +15,7 @@ import type { PhotoMutation, ResumePhotoSettings } from '@/components/dashboard/
 import { AdaptiveCropBox, type CropRect } from '@/components/builder/adaptive-crop-box';
 import { useTranslations } from '@/lib/i18n';
 
-const DEFAULT_SIZE = 120;
+const DEFAULT_SIZE = 88;
 const MIN_SQUARE_SIZE = 120;
 const MAX_SIZE = 144;
 const FULL_IMAGE_CROP: CropRect = {
@@ -47,7 +47,8 @@ export function ProfilePhotoEditorDialog({
   onApply,
 }: ProfilePhotoEditorDialogProps) {
   const { t } = useTranslations();
-  const [size, setSize] = useState(Math.max(squarePhoto ? MIN_SQUARE_SIZE : 64, initialSettings?.size ?? DEFAULT_SIZE));
+  const defaultSize = squarePhoto ? MIN_SQUARE_SIZE : DEFAULT_SIZE;
+  const [size, setSize] = useState(Math.max(squarePhoto ? MIN_SQUARE_SIZE : 64, initialSettings?.size ?? defaultSize));
   const [crop, setCrop] = useState<CropRect>(FULL_IMAGE_CROP);
 
   const initialCrop = useMemo<CropRect>(() => {
@@ -63,12 +64,12 @@ export function ProfilePhotoEditorDialog({
   useEffect(() => {
     if (!open) return;
     setCrop(initialCrop);
-    setSize(Math.max(squarePhoto ? MIN_SQUARE_SIZE : 64, initialSettings?.size ?? DEFAULT_SIZE));
-  }, [initialCrop, initialSettings?.size, open, squarePhoto]);
+    setSize(Math.max(squarePhoto ? MIN_SQUARE_SIZE : 64, initialSettings?.size ?? defaultSize));
+  }, [defaultSize, initialCrop, initialSettings?.size, open, squarePhoto]);
 
   const handleReset = () => {
     setCrop(FULL_IMAGE_CROP);
-    setSize(DEFAULT_SIZE);
+    setSize(defaultSize);
   };
 
   const handleApply = async () => {
