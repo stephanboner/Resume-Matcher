@@ -42,3 +42,24 @@ export function fitSquarePhotoAroundText(
   // Never obscure text. In unusually crowded layouts, hide the overlay.
   return 0;
 }
+
+/**
+ * Reserve the full width of the first content section, including its heading.
+ * Text-node collision checks alone are insufficient: a short "SUMMARY" heading
+ * on the left still marks the start of the next section on the whole page.
+ * The photo must end before that heading, without changing document flow.
+ */
+export function fitSquarePhotoBeforeSection(
+  requestedSize: number,
+  frameTop: number,
+  firstSectionTop: number | null | undefined,
+  scale = 1,
+  gap = 8
+): number {
+  if (!Number.isFinite(requestedSize) || requestedSize <= 0) return 0;
+  const requested = Math.floor(requestedSize);
+  if (firstSectionTop == null || !Number.isFinite(firstSectionTop)) return requested;
+  const safeScale = Number.isFinite(scale) && scale > 0 ? scale : 1;
+  const available = Math.floor((firstSectionTop - frameTop) / safeScale - gap);
+  return Math.max(0, Math.min(requested, available));
+}
