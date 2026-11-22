@@ -193,6 +193,8 @@ export function ResumePhotoLayout({
     <div
       ref={wrapperRef}
       data-photo-overlay="true"
+      data-photo-template={modernDeedy ? "modern-deedy" : undefined}
+      data-photo-requested-size={modernDeedy ? desiredSize : undefined}
       data-photo-fit-ready={!modernDeedy || photoFitReady ? "true" : "false"}
       className={`${styles.wrapper} ${modernDeedy ? styles.modernDeedy : ''}`}
       style={layoutStyle}
