@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import type { ResumePhotoSettings } from '@/components/dashboard/resume-component';
 import { getResumePhotoUrl } from '@/lib/api/resume';
-import { fitSquarePhotoAroundText, type PhotoTextRect } from '@/lib/utils/resume-photo-fit';
+import { fitSquarePhotoAroundText, fitSquarePhotoBeforeSection, type PhotoTextRect } from '@/lib/utils/resume-photo-fit';
 import styles from './styles/resume-profile-photo.module.css';
 
 interface ResumeProfilePhotoProps {
@@ -134,9 +134,21 @@ export function ResumePhotoLayout({
       }
       range.detach?.();
 
-      const fitted = fitSquarePhotoAroundText(
+      const collisionSafeSize = fitSquarePhotoAroundText(
         desiredSize, { top: frame.top, right: frame.right }, lines, scale
       );
+
+      // A short heading such as SUMMARY may sit entirely left of the portrait,
+      // yet the portrait must not extend into that section's vertical area.
+      // Reserve a gap before the first section WITHOUT changing any text positions.
+      const firstSection = textRoot.querySelector<HTMLElement>('[data-resume-section]');
+      const sectionSafeSize = fitSquarePhotoBeforeSection(
+        desiredSize,
+        frame.top,
+        firstSection?.getBoundingClientRect().top,
+        scale
+      );
+      const fitted = Math.min(collisionSafeSize, sectionSafeSize);
       setSafePhotoSize((previous) => previous === fitted ? previous : fitted);
     };
 
