@@ -2264,6 +2264,10 @@ pyjwt==2.15.1 \
     # via
     #   rm-backend (pyproject.toml)
     #   mcp
+pypdf==6.21.4 \
+    --hash=sha256:33e4fb41ca352810eb4e9838aa0d82d6888a5f8bf682f43e99cce5faa666255c \
+    --hash=sha256:c8817e3f888d47a087872ded69812c1ef30cacb871d6e053e0c00bbaf0bc2163
+    # via rm-backend (pyproject.toml)
 pypdfium2==5.15.2 \
     --hash=sha256:0185193bbdf0cc39f0bf31954c25f12edb81048bcb628ea4fc3dccf8d2ce2aef \
     --hash=sha256:2dd2ef2e966181b199870e109ae3c17af4415fc012ba12b7f8d7e08d521bd480 \
