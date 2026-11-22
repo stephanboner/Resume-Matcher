@@ -469,16 +469,6 @@ async def _render_page_to_pdf(
                 "Print page reported %r for %s", print_error, _redact_draft_token(url)
             )
             raise PDFRenderError("The print page could not load the resume.")
-    # Bound the fonts wait too — plain page.evaluate has no timeout, so a stuck
-    # font load could otherwise hang the render past _NAV_TIMEOUT_MS.
-    await _await_before_deadline(
-        page.wait_for_function(
-            "() => document.fonts.ready.then(() => true)",
-            timeout=_stage_timeout_ms(work_deadline),
-        ),
-        work_deadline,
-        "font readiness",
-    )
     # Wait for any server-managed resume photos to decode before capturing the page.
     await _await_before_deadline(
         page.wait_for_function(
@@ -489,6 +479,16 @@ async def _render_page_to_pdf(
         ),
         work_deadline,
         "profile photo readiness",
+    )
+    # Bound the fonts wait too — plain page.evaluate has no timeout, so a stuck
+    # font load could otherwise hang the render past _NAV_TIMEOUT_MS.
+    await _await_before_deadline(
+        page.wait_for_function(
+            "() => document.fonts.ready.then(() => true)",
+            timeout=_stage_timeout_ms(work_deadline),
+        ),
+        work_deadline,
+        "font readiness",
     )
     return await _await_before_deadline(
         page.pdf(
