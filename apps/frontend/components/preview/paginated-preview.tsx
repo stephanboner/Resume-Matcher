@@ -229,6 +229,13 @@ export function PaginatedPreview({ resumeData, settings, resumeId }: PaginatedPr
                 showMarginGuides={showMargins}
                 contentOffset={page.contentOffset}
                 contentEnd={page.contentEnd}
+                allowTopOverflow={Boolean(
+                  index === 0 &&
+                  settings.template === 'modern-deedy' &&
+                  resumeId &&
+                  resumeData.personalInfo?.photo &&
+                  resumeData.personalInfo.photo.visible !== false
+                )}
               >
                 <Resume
                   resumeId={index === 0 ? resumeId : undefined}
