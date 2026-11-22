@@ -54,7 +54,7 @@ export function fitSquarePhotoBeforeSection(
   frameTop: number,
   firstSectionTop: number | null | undefined,
   scale = 1,
-  gap = 8
+  gap = 3
 ): number {
   if (!Number.isFinite(requestedSize) || requestedSize <= 0) return 0;
   const requested = Math.floor(requestedSize);
