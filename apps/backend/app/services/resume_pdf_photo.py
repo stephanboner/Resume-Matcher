@@ -16,7 +16,7 @@ from collections.abc import Iterator
 from typing import Any
 
 from pdfminer.high_level import extract_pages
-from pdfminer.layout import LTChar
+from pdfminer.layout import LTChar, LTTextLine
 from PIL import Image, ImageOps, UnidentifiedImageError
 from pypdf import PdfReader, PdfWriter, Transformation
 
@@ -38,6 +38,46 @@ def _text_boxes(layout_item: Any) -> Iterator[tuple[float, float, float, float]]
         yield from _text_boxes(child)
 
 
+def _first_section_top_pt(layout: Any) -> float | None:
+    """Locate the first uppercase section heading after the contact header.
+
+    Mirrors Modern Deedy's section boundaries so the PDF and preview keep the
+    portrait above headings, not merely above body text. Unrecognized layouts
+    still have per-glyph collision protection.
+    """
+    lines: list[tuple[float, float, str]] = []
+
+    def visit(item: Any) -> None:
+        if isinstance(item, LTTextLine):
+            text = item.get_text().strip()
+            if text:
+                lines.append((float(layout.height - item.bbox[3]), float(item.bbox[0]), text))
+            return
+        for child in getattr(item, "_objs", ()):
+            visit(child)
+
+    visit(layout)
+    if not lines:
+        return None
+    lines.sort(key=lambda entry: entry[0])
+    contact_index = next(
+        (i for i, (_, _, text) in enumerate(lines)
+         if "@" in text or "linkedin" in text.lower() or " | " in text),
+        0,
+    )
+
+    for top, left, text in lines[contact_index + 1:]:
+        letters = [char for char in text if char.isalpha()]
+        if (
+            top < layout.height * 0.45
+            and left < layout.width * 0.5
+            and 4 <= len(letters) <= 44
+            and all(char.isupper() for char in letters)
+        ):
+            return top
+    return None
+
+
 def choose_safe_photo_size_px(
     requested_size_px: int,
     page_width_pt: float,
@@ -46,6 +86,7 @@ def choose_safe_photo_size_px(
     *,
     inset_mm: float = PAPER_INSET_MM,
     gap_pt: float = PHOTO_TEXT_GAP_PT,
+    first_section_top_pt: float | None = None,
 ) -> int:
     """Find the largest square at the top right that does not overlap any glyph.
 
@@ -57,7 +98,13 @@ def choose_safe_photo_size_px(
     inset = inset_mm * MM_TO_PT
     right = page_width_pt - inset
     top = page_height_pt - inset
-    for size in range(min(int(requested_size_px), MAX_VISIBLE_SIZE_PX), MIN_VISIBLE_SIZE_PX - 1, -1):
+    max_side = min(int(requested_size_px), MAX_VISIBLE_SIZE_PX)
+    if first_section_top_pt is not None and math.isfinite(first_section_top_pt):
+        # The heading starts a full-width new section, even if its letters are
+        # only on the left. Keep the portrait just above that horizontal line.
+        max_from_section = math.floor((first_section_top_pt - (page_height_pt - top) - gap_pt) / PX_TO_PT)
+        max_side = min(max_side, max_from_section)
+    for size in range(max_side, MIN_VISIBLE_SIZE_PX - 1, -1):
         side = size * PX_TO_PT
         left = right - side
         bottom = top - side
@@ -90,7 +137,13 @@ def add_resume_photo_to_pdf(
     if layout is None:
         return pdf_bytes
     text_boxes = list(_text_boxes(layout))
-    safe_px = choose_safe_photo_size_px(requested_size_px, width, height, text_boxes)
+    safe_px = choose_safe_photo_size_px(
+        requested_size_px,
+        width,
+        height,
+        text_boxes,
+        first_section_top_pt=_first_section_top_pt(layout),
+    )
     if not safe_px:
         # No usable space: protecting the text takes precedence over the photo.
         return pdf_bytes
