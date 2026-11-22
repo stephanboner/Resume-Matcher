@@ -762,12 +762,12 @@ async def _generate_auxiliary_messages(
 
     if enable_cover_letter:
         generation_tasks.append(
-            generate_cover_letter(improved_data, job_content, language)
+            generate_cover_letter(strip_photo_metadata(improved_data), job_content, language)
         )
         task_labels.append("cover_letter")
     if enable_outreach:
         generation_tasks.append(
-            generate_outreach_message(improved_data, job_content, language)
+            generate_outreach_message(strip_photo_metadata(improved_data), job_content, language)
         )
         task_labels.append("outreach")
     if enable_interview_prep:
@@ -1417,7 +1417,7 @@ async def _improve_preview_flow(
         # The condensed, fitted source replaces the full master for every
         # downstream step so preservation contracts hold at confirm time.
         original_resume_data = selection.data
-        source_content = json.dumps(original_resume_data, ensure_ascii=False)
+        source_content = json.dumps(strip_photo_metadata(original_resume_data), ensure_ascii=False)
         bullet_selection = selection.summary
         response_warnings.extend(selection.warnings)
     # Rewriting must not add bullets to the entries whose bullet set was chosen.
@@ -1546,8 +1546,8 @@ async def _improve_preview_flow(
             refinement_attempted = True
             progress["stage"] = "refine_resume"
             refinement_result = await refine_resume(
-                initial_tailored=improved_data,
-                master_resume=master_data,
+                initial_tailored=strip_photo_metadata(improved_data),
+                master_resume=strip_photo_metadata(master_data),
                 job_description=job["content"],
                 job_keywords=job_keywords,
                 config=RefinementConfig(),
@@ -2177,8 +2177,8 @@ async def execute_tailoring_pipeline(
             initial_match = calculate_keyword_match(improved_data, job_keywords)
             refinement_attempted = True
             refinement_result = await refine_resume(
-                initial_tailored=improved_data,
-                master_resume=master_data,
+                initial_tailored=strip_photo_metadata(improved_data),
+                master_resume=strip_photo_metadata(master_data),
                 job_description=job["content"],
                 job_keywords=job_keywords,
                 config=RefinementConfig(),

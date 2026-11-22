@@ -15,6 +15,7 @@ from app.ai_budget import (
     remaining_timeout,
 )
 from app.ai_limits import MAX_ITEM_WORKERS, PromptSizeError, require_source_size
+from app.services.resume_photo import strip_photo_metadata
 from app.config_cache import get_content_language
 from app.database import DatabaseBusyError, db
 from app.llm import complete_json
@@ -173,7 +174,7 @@ async def analyze_resume(resume_id: str) -> AnalysisResponse:
     require_source_size(processed_data)
 
     # Build prompt with content language
-    resume_json = json.dumps(processed_data)
+    resume_json = json.dumps(strip_photo_metadata(processed_data))
     language = get_content_language()
     output_language = get_language_name(language)
     prompt = ANALYZE_RESUME_PROMPT.format(
@@ -288,7 +289,7 @@ async def generate_enhancements(request: EnhanceRequest) -> EnhancementPreview:
                 )
     else:
         # Legacy path — re-analyze to get question-to-item mapping
-        resume_json = json.dumps(processed_data)
+        resume_json = json.dumps(strip_photo_metadata(processed_data))
         language = get_content_language()
         output_language = get_language_name(language)
         analysis_prompt = ANALYZE_RESUME_PROMPT.format(

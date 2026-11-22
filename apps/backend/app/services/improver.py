@@ -26,6 +26,7 @@ from app.prompts import (
     get_language_name,
 )
 from app.prompts.templates import IMPROVE_SCHEMA_EXAMPLE
+from app.services.resume_photo import strip_photo_metadata
 from app.schemas import ResumeData, ResumeDiffSummary, ResumeFieldDiff
 from app.schemas.models import (
     SKILL_ROW_BREAK,
@@ -772,7 +773,7 @@ async def generate_resume_diffs(
     # Use structured JSON if available with month precision, else markdown
     if original_resume_data is not None:
         if _has_month_in_dates(original_resume_data):
-            resume_input = json.dumps(original_resume_data, ensure_ascii=False)
+            resume_input = json.dumps(strip_photo_metadata(original_resume_data), ensure_ascii=False)
         else:
             resume_input = original_resume
     else:
@@ -939,7 +940,7 @@ def _extract_jd_skill_index(
 
 def _skill_present_in_resume_text(skill: str, resume_data: dict[str, Any]) -> bool:
     """Return True when a skill phrase already appears in the resume text."""
-    text = json.dumps(resume_data, ensure_ascii=False)
+    text = json.dumps(strip_photo_metadata(resume_data), ensure_ascii=False)
     return keyword_in_text(skill, text)
 
 
@@ -1045,7 +1046,7 @@ async def generate_skill_target_plan(
         existing_skills=json.dumps(existing_skills, ensure_ascii=False),
         job_keywords=_prepare_keywords_for_prompt(job_keywords),
         job_description=sanitized_jd,
-        original_resume=json.dumps(original_resume_data, ensure_ascii=False),
+        original_resume=json.dumps(strip_photo_metadata(original_resume_data), ensure_ascii=False),
     )
 
     result = await complete_json(
@@ -1128,7 +1129,7 @@ async def improve_resume(
     # (year-only) dates — the markdown preserves months from the original PDF.
     if original_resume_data is not None:
         if _has_month_in_dates(original_resume_data):
-            resume_input = json.dumps(original_resume_data)
+            resume_input = json.dumps(strip_photo_metadata(original_resume_data))
         else:
             logger.info(
                 "Structured resume data has year-only dates; using raw markdown "
