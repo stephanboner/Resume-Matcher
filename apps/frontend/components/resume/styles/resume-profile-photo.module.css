@@ -33,12 +33,13 @@
   }
 }
 
-/* Lift the first-page portrait INTO the paper's top margin, not outside
-   the physical sheet. The margin-controlled offset is shared with preview
-   page-level coordinates, so the CV header and sections stay untouched. */
+/* Place the portrait relative to the physical page top-right corner.
+   Negative offsets compensate for the print engine's text margins; neither
+   the text geometry nor the section flow is modified. */
 .modernDeedy .photo {
-  top: calc(-1 * var(--resume-profile-photo-top-shift, 32px));
-  right: 0;
+  /* Subtraction is more broadly supported than multiplying a length by -1. */
+  top: calc(0px - var(--resume-profile-photo-top-shift, 22px));
+  right: calc(0px - var(--resume-profile-photo-right-shift, 22px));
 }
 
 .modernDeedy .image {
