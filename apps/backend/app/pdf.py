@@ -479,6 +479,17 @@ async def _render_page_to_pdf(
         work_deadline,
         "font readiness",
     )
+    # Wait for any server-managed resume photos to decode before capturing the page.
+    await _await_before_deadline(
+        page.wait_for_function(
+            """() => Array.from(document.querySelectorAll('[data-photo-overlay] img')).every(
+                (img) => img.complete && img.naturalWidth > 0
+            )""",
+            timeout=_stage_timeout_ms(work_deadline),
+        ),
+        work_deadline,
+        "profile photo readiness",
+    )
     return await _await_before_deadline(
         page.pdf(
             format=pdf_format,
