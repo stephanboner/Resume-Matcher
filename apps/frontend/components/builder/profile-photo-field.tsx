@@ -3,7 +3,7 @@
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
-import { ImagePlus, Pencil, Replace, Trash2 } from 'lucide-react';
+import { ImageSquare as ImagePlus, PencilSimple as Pencil, ArrowsClockwise as Replace, Trash as Trash2 } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import type { PhotoMutation, ResumePhotoSettings } from '@/components/dashboard/resume-component';
@@ -169,11 +169,11 @@ export function ProfilePhotoField({
 
   return (
     <div className="space-y-3">
-      <div className="font-mono text-xs uppercase tracking-wider text-steel-grey">
+      <div className="font-mono text-xs uppercase tracking-wider text-steel">
         {t('resume.photo.label')}
       </div>
       {photo && resumeId ? (
-        <div className="flex items-center gap-4 border border-black bg-background p-4">
+        <div className="flex items-center gap-4 border border-black bg-canvas p-4">
           <Image
             src={getResumePhotoUrl(resumeId, photo.version)}
             alt={t('resume.photo.alt', { name: name || t('resume.defaults.name') })}
@@ -248,7 +248,7 @@ export function ProfilePhotoField({
           tabIndex={disabled ? -1 : 0}
           aria-disabled={disabled}
           aria-label={t('resume.photo.add')}
-          className="flex min-h-28 cursor-pointer items-center gap-4 border-2 border-black bg-background p-4 focus:outline-none focus:ring-2 focus:ring-blue-700"
+          className="flex min-h-28 cursor-pointer items-center gap-4 border-2 border-black bg-canvas p-4 focus:outline-none focus:ring-2 focus:ring-primary"
           onClick={() => {
             if (!disabled) inputRef.current?.click();
           }}
@@ -285,7 +285,7 @@ export function ProfilePhotoField({
       />
 
       {error && !editorOpen && (
-        <div role="alert" className="border-2 border-red-600 bg-red-50 p-3 text-red-700">
+        <div role="alert" className="border-2 border-destructive bg-destructive-tint p-3 text-destructive">
           {error}
         </div>
       )}
