@@ -237,6 +237,7 @@ const Resume: React.FC<ResumeProps> = ({
       resumeId={resumeId}
       name={resumeData.personalInfo?.name}
       photo={resumeData.personalInfo?.photo ?? undefined}
+      template={mergedSettings.template}
       editLabel="Edit photo"
       profilePhotoLabel="Profile photo"
     >
@@ -317,6 +318,11 @@ const Resume: React.FC<ResumeProps> = ({
           data={resumeData}
           showContactIcons={mergedSettings.showContactIcons}
           additionalSectionLabels={additionalSectionLabels}
+          hasProfilePhoto={Boolean(
+            resumeId &&
+            resumeData.personalInfo?.photo &&
+            resumeData.personalInfo.photo.visible !== false
+          )}
         />
       )}
       {mergedSettings.template === 'deedy' && (
