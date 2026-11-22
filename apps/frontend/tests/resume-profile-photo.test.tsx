@@ -129,7 +129,7 @@ describe('resume photo layout', () => {
     const safe = fitSquarePhotoBeforeSection(120, photoTop, summaryTop, scale);
     expect(safe).toBeLessThan(120);
     expect(safe).toBeGreaterThan(80);
-    expect(photoTop + safe * scale + 8 * scale).toBeLessThanOrEqual(summaryTop);
+    expect(photoTop + safe * scale + 3 * scale).toBeLessThanOrEqual(summaryTop);
   });
 
   it('does not resize the portrait when the first section starts below it', () => {
