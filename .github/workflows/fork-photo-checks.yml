@@ -22,11 +22,11 @@ jobs:
       - name: Prepare Python
         working-directory: apps/backend
         run: uv python install 3.14
-      - name: Run photo validation tests
+      - name: Run backend regression suite
         working-directory: apps/backend
         run: |
           uv sync --extra dev
-          uv run pytest -q tests/unit/test_resume_photo.py tests/unit/test_resume_photo_storage.py
+          uv run pytest -q
 
   frontend:
     runs-on: ubuntu-latest
@@ -46,6 +46,9 @@ jobs:
       - name: Test crop geometry
         working-directory: apps/frontend
         run: npx vitest run tests/adaptive-crop-box.test.ts
+      - name: Run frontend regression suite
+        working-directory: apps/frontend
+        run: npm test
       - name: Build
         working-directory: apps/frontend
         run: npm run build
