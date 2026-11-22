@@ -33,14 +33,15 @@
   }
 }
 
-/* Keep the portrait's bottom edge where the original 88px photo ended.
-   Enlarging it expands upward into the page margin, not into the first section,
-   and never changes the layout geometry of the header/body text. */
+/* Pin the portrait to the top-right of the resume content (not above it).
+   Absolute positioning keeps the header and subsequent sections unchanged. */
 .modernDeedy .photo {
-  top: calc(88px - var(--resume-profile-photo-size, 120px));
+  top: 0;
+  right: 0;
 }
 
 .modernDeedy .image {
   object-fit: cover;
-  object-position: center;
+  /* Keep the top of the portrait visible even for older, non-square crops. */
+  object-position: center top;
 }
