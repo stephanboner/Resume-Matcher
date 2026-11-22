@@ -15,6 +15,7 @@ interface PageContainerProps {
   children: React.ReactNode;
   contentOffset?: number; // Where this page's content starts (in px)
   contentEnd?: number; // Where this page's content ends (in px)
+  allowTopOverflow?: boolean; // Permit a first-page photo to extend into the top margin
 }
 
 /**
@@ -33,6 +34,7 @@ export function PageContainer({
   children,
   contentOffset = 0,
   contentEnd,
+  allowTopOverflow = false,
 }: PageContainerProps) {
   const { t } = useTranslations();
   const pageDims = PAGE_DIMENSIONS[pageSize];
@@ -87,8 +89,13 @@ export function PageContainer({
 
         {/* Content area with clipping - uses actualContentHeight to prevent content overlap */}
         <div
-          className="absolute overflow-hidden"
+          className={allowTopOverflow && pageNumber === 1 ? 'absolute overflow-visible' : 'absolute overflow-hidden'}
           style={{
+            // On page 1 only, allow the absolutely positioned profile photo to extend
+            // into the page's top margin; retain clipping at sides and page bottom.
+            ...(allowTopOverflow && pageNumber === 1
+              ? { clipPath: `inset(-${marginTopPx}px 0 0 0)` }
+              : {}),
             top: marginTopPx,
             left: marginLeftPx,
             width: contentWidth,
