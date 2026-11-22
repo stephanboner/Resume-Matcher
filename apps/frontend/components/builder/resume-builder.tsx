@@ -983,7 +983,7 @@ const ResumeBuilderContent = ({ agentMode = false }: ResumeBuilderProps) => {
     ]
   );
 
-  const handlePhotoChange = async (action: () => Promise<{ processed_resume?: ResumeData | null }>) => {
+  const handlePhotoChange = async (action: () => Promise<{ processed_resume?: unknown }>) => {
     if (!resumeId || loadingState !== 'loaded') throw new Error('Resume is not ready');
     if (isPhotoSaving) throw new Error('Photo update is already running');
     setIsPhotoSaving(true);
@@ -995,8 +995,9 @@ const ResumeBuilderContent = ({ agentMode = false }: ResumeBuilderProps) => {
       await resumeSaveQueueRef.current;
       const result = await action();
       if (!result.processed_resume) throw new Error('Missing photo response');
-      setResumeData(result.processed_resume);
-      setLastSavedData(result.processed_resume);
+      const savedResume = result.processed_resume as ResumeData;
+      setResumeData(savedResume);
+      setLastSavedData(savedResume);
       setHasUnsavedChanges(false);
       clearStoredResumeDraft(resumeId);
     } finally {
