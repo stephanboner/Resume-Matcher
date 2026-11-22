@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from '@testing-library/react';
 import {
@@ -56,6 +58,19 @@ describe('resume photo layout', () => {
     );
     expect(container.querySelector('[data-photo-overlay]')).toBeNull();
     expect(container.textContent).toBe('Resume content');
+  });
+
+  it('pins Modern Deedy photos inside the top-right content corner', () => {
+    const css = readFileSync(
+      join(process.cwd(), 'components/resume/styles/resume-profile-photo.module.css'),
+      'utf8'
+    );
+    const placement = css.match(/\.modernDeedy\s+\.photo\s*\{([^}]*)\}/)?.[1] ?? '';
+    expect(placement).toMatch(/top:\s*0\s*;/);
+    expect(placement).toMatch(/right:\s*0\s*;/);
+    expect(placement).not.toMatch(/calc\(|margin|padding|transform/);
+    const image = css.match(/\.modernDeedy\s+\.image\s*\{([^}]*)\}/)?.[1] ?? '';
+    expect(image).toMatch(/object-position:\s*center top\s*;/);
   });
 
   it('respects larger photo sizes in square mode', () => {
