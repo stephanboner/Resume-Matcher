@@ -26,6 +26,7 @@ interface ProfilePhotoFieldProps {
   resumeId?: string | null;
   name?: string;
   photo?: ResumePhotoSettings;
+  squarePhoto?: boolean;
   onUpload: (file: File, mutation: PhotoMutation) => Promise<void>;
   onEdit: (mutation: PhotoMutation) => Promise<void>;
   onRemove: () => Promise<void>;
@@ -38,6 +39,7 @@ export function ProfilePhotoField({
   resumeId,
   name,
   photo,
+  squarePhoto = false,
   onUpload,
   onEdit,
   onRemove,
@@ -294,6 +296,7 @@ export function ProfilePhotoField({
         open={editorOpen}
         sourceUrl={sourceUrl}
         initialSettings={pendingFile ? undefined : photo}
+        squarePhoto={squarePhoto}
         applying={applying || disabled}
         error={error}
         onOpenChange={setOpen}
