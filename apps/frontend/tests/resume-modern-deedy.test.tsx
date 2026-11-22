@@ -81,6 +81,20 @@ describe('ResumeModernDeedy', () => {
     );
   });
 
+  it('left-aligns the header only with a visible photo', () => {
+    const withoutPhoto = render(<ResumeModernDeedy data={data} />);
+    expect(withoutPhoto.container.querySelector('header')?.className).not.toContain(
+      'headerWithPhoto'
+    );
+    withoutPhoto.unmount();
+
+    const withPhoto = render(<ResumeModernDeedy data={data} hasProfilePhoto />);
+    const header = withPhoto.container.querySelector('header');
+    expect(header?.className).toContain('headerWithPhoto');
+    expect(header?.textContent).toContain('Sarah Chen');
+    expect(header?.textContent).toContain('sarah.chen@example.com');
+  });
+
   it('puts company, role, place and dates on one header line in reading order', () => {
     const { container } = render(<ResumeModernDeedy data={data} />);
     expect(text(container)).toContain(
