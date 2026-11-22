@@ -95,7 +95,7 @@ export function ProfilePhotoEditorDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent motion="fade" className="max-w-2xl p-0">
+      <DialogContent size="lg" className="max-w-2xl p-0">
         <DialogHeader className="border-b border-black p-6">
           <DialogTitle className="text-2xl uppercase">{t('resume.photo.dialogTitle')}</DialogTitle>
           <DialogDescription className="font-mono text-xs">
