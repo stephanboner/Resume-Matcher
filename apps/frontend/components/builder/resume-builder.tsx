@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, Suspense, useCallback, useMemo, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { type ResumeData } from '@/components/dashboard/resume-component';
+import { type PhotoMutation, type ResumeData } from '@/components/dashboard/resume-component';
+import { ProfilePhotoField } from './profile-photo-field';
 import { ResumeForm } from './resume-form';
 import { FormattingControls } from './formatting-controls';
 import { CoverLetterEditor } from './cover-letter-editor';
@@ -47,6 +48,9 @@ import {
   generateInterviewPrep,
   fetchJobDescription,
   updateResumeTemplateSettings,
+  putResumePhoto,
+  patchResumePhoto,
+  deleteResumePhoto,
 } from '@/lib/api/resume';
 import { JDComparisonView } from './jd-comparison-view';
 import { AtsCheckView } from './ats-check-view';
@@ -264,6 +268,7 @@ const ResumeBuilderContent = ({ agentMode = false }: ResumeBuilderProps) => {
   const [showLeaveWithLocalDraftDialog, setShowLeaveWithLocalDraftDialog] = useState(false);
   const [hasCurrentLocalDraft, setHasCurrentLocalDraft] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isPhotoSaving, setIsPhotoSaving] = useState(false);
   const [loadingState, setLoadingState] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
   // The resume's own formatting, applied when it loads. A resume never formatted
   // keeps the defaults.
@@ -977,6 +982,40 @@ const ResumeBuilderContent = ({ agentMode = false }: ResumeBuilderProps) => {
       t,
     ]
   );
+
+  const handlePhotoChange = async (action: () => Promise<{ processed_resume?: ResumeData | null }>) => {
+    if (!resumeId || loadingState !== 'loaded') throw new Error('Resume is not ready');
+    if (isPhotoSaving) throw new Error('Photo update is already running');
+    setIsPhotoSaving(true);
+    try {
+      // Finish any pending text saves before editing server-owned photo metadata.
+      // The agent conflict guard is enforced by flushResumeChanges.
+      if (!(await agentAllowsSave('resume', true))) throw new Error('Resolve the agent update first');
+      if (!(await flushResumeChanges(true))) throw new Error('Save your CV text before editing photo');
+      await resumeSaveQueueRef.current;
+      const result = await action();
+      if (!result.processed_resume) throw new Error('Missing photo response');
+      setResumeData(result.processed_resume);
+      setLastSavedData(result.processed_resume);
+      setHasUnsavedChanges(false);
+      clearStoredResumeDraft(resumeId);
+    } finally {
+      setIsPhotoSaving(false);
+    }
+  };
+
+  const handlePhotoUpload = async (file: File, mutation: PhotoMutation) => {
+    if (!resumeId) throw new Error('Resume ID required');
+    await handlePhotoChange(() => putResumePhoto(resumeId, file, mutation));
+  };
+  const handlePhotoEdit = async (mutation: PhotoMutation) => {
+    if (!resumeId) throw new Error('Resume ID required');
+    await handlePhotoChange(() => patchResumePhoto(resumeId, mutation));
+  };
+  const handlePhotoRemove = async () => {
+    if (!resumeId) throw new Error('Resume ID required');
+    await handlePhotoChange(() => deleteResumePhoto(resumeId));
+  };
 
   const handleSave = async () => {
     if (!resumeId) {
@@ -1890,6 +1929,15 @@ const ResumeBuilderContent = ({ agentMode = false }: ResumeBuilderProps) => {
                       settings={templateSettings}
                       onChange={handleSettingsChange}
                     />
+                    <ProfilePhotoField
+                      resumeId={resumeId}
+                      name={resumeData.personalInfo?.name}
+                      photo={resumeData.personalInfo?.photo ?? undefined}
+                      onUpload={handlePhotoUpload}
+                      onEdit={handlePhotoEdit}
+                      onRemove={handlePhotoRemove}
+                      disabled={isPhotoSaving || loadingState !== 'loaded' || isSaving || isAutoSaving}
+                    />
                     <ResumeForm
                       key={resumeFormKey}
                       resumeData={resumeData}
@@ -2122,6 +2170,7 @@ const ResumeBuilderContent = ({ agentMode = false }: ResumeBuilderProps) => {
               {/* Resume Preview (the Writing tab shows the resume it edits) */}
               {(activeTab === 'resume' || activeTab === 'writing') && (
                 <PaginatedPreview
+                  resumeId={resumeId ?? undefined}
                   resumeData={localizedResumeDataForPreview}
                   settings={templateSettings}
                 />
