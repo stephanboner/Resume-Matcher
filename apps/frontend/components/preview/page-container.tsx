@@ -2,7 +2,7 @@
 
 import React, { useLayoutEffect, useRef, useState } from 'react';
 import { fitSquarePhotoAroundText, type PhotoTextRect } from '@/lib/utils/resume-photo-fit';
-import { getPagePhotoTopPx } from '@/lib/utils/resume-photo-page';
+import { getPagePhotoTopPx, getPagePhotoRightPx } from '@/lib/utils/resume-photo-page';
 import { type PageSize, type MarginSettings } from '@/lib/types/template-settings';
 import { PAGE_DIMENSIONS, mmToPx } from '@/lib/constants/page-dimensions';
 import { useTranslations } from '@/lib/i18n';
@@ -62,6 +62,7 @@ export function PageContainer({
   const contentWidth = pageWidthPx - marginLeftPx - marginRightPx;
   const maxContentHeight = pageHeightPx - marginTopPx - marginBottomPx;
   const portraitTop = getPagePhotoTopPx(margins.top);
+  const portraitRight = getPagePhotoRightPx(margins.right);
 
   // Calculate the actual visible height for this page
   // If contentEnd is provided, limit the height to avoid showing content that belongs on the next page
@@ -111,7 +112,7 @@ export function PageContainer({
             }
           }
           range.detach?.();
-          const right = paperRect.right - marginRightPx * pageScale;
+          const right = paperRect.right - portraitRight * pageScale;
           const top = paperRect.top + portraitTop * pageScale;
           fitted = Math.min(fitted, fitSquarePhotoAroundText(
             fitted, { top, right }, lines, pageScale
@@ -134,7 +135,7 @@ export function PageContainer({
       observer?.disconnect();
       window.removeEventListener('resize', measure);
     };
-  }, [pageNumber, pagePortrait?.url, pagePortrait?.size, portraitTop, pageWidthPx, marginRightPx, scale]);
+  }, [pageNumber, pagePortrait?.url, pagePortrait?.size, portraitTop, portraitRight, pageWidthPx, scale]);
 
   const renderedPortraitSize = Math.min(pagePortrait?.size ?? 0, fittedPortraitSize ?? pagePortrait?.size ?? 0);
 
@@ -205,7 +206,7 @@ export function PageContainer({
             className="absolute z-20 bg-white"
             style={{
               top: portraitTop,
-              right: marginRightPx,
+              right: portraitRight,
               width: renderedPortraitSize,
               height: renderedPortraitSize,
               border: '1px solid var(--resume-border-primary)',
