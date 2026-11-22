@@ -41,6 +41,12 @@
 
 .headerWithPhoto .contactRow {
   justify-content: flex-start;
+  /* Photo headers can wrap over two lines: use spacing rather than orphaned pipes. */
+  gap: 0.25em 0.85em;
+}
+
+.headerWithPhoto .contactRow > .pipe {
+  display: none;
 }
 
 .name {
