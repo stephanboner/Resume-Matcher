@@ -65,6 +65,17 @@ def test_long_contact_text_forces_smaller_photo_without_touching_text():
     assert choose_safe_photo_size_px(120, width, height, [(20, 745, 125, 765)]) == 120
 
 
+def test_full_width_section_heading_caps_photo_size_like_preview():
+    width, height = 595.2756, 841.8898
+    safe = choose_safe_photo_size_px(
+        120, width, height, [],
+        first_section_top_pt=90.0,
+    )
+    assert 95 <= safe <= 103
+    photo_bottom_from_top_pt = 4 * 72 / 25.4 + safe * 72 / 96
+    assert photo_bottom_from_top_pt + 2.25 <= 90.0
+
+
 def test_unsupported_or_invalid_images_leave_pdf_unchanged():
     original = _blank_a4()
     assert add_resume_photo_to_pdf(original, b"not an image", 120) == original
