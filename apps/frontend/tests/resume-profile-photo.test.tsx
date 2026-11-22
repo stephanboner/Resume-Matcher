@@ -7,7 +7,7 @@ import {
   getPhotoDisplayDimensions,
 } from '@/components/resume/resume-profile-photo';
 import type { ResumePhotoSettings } from '@/components/dashboard/resume-component';
-import { fitSquarePhotoAroundText } from '@/lib/utils/resume-photo-fit';
+import { fitSquarePhotoAroundText, fitSquarePhotoBeforeSection } from '@/lib/utils/resume-photo-fit';
 
 vi.mock('@/lib/api/resume', () => ({
   getResumePhotoUrl: (resumeId: string, version: number) =>
@@ -107,6 +107,27 @@ describe('resume photo layout', () => {
       { top: 100, right: 1300 },
       [{ left: 1100, right: 1300, top: 100, bottom: 190 }]
     )).toBe(0);
+  });
+
+  it('ends the portrait above the SUMMARY heading even when heading text is far to the left', () => {
+    // Screenshot: the 120px portrait was entirely visible, but its bottom
+    // extended beyond the beginning of SUMMARY at viewport y=231.
+    const photoTop = 89;
+    const summaryTop = 231;
+    const scale = 1.45;
+    const safe = fitSquarePhotoBeforeSection(120, photoTop, summaryTop, scale);
+    expect(safe).toBeLessThan(120);
+    expect(safe).toBeGreaterThan(80);
+    expect(photoTop + safe * scale + 8 * scale).toBeLessThanOrEqual(summaryTop);
+  });
+
+  it('does not resize the portrait when the first section starts below it', () => {
+    expect(fitSquarePhotoBeforeSection(120, 100, 330, 1.5)).toBe(120);
+    expect(fitSquarePhotoBeforeSection(120, 100, undefined, 1.5)).toBe(120);
+  });
+
+  it('hides an overlay if there is not enough room before the first section', () => {
+    expect(fitSquarePhotoBeforeSection(120, 100, 104, 1)).toBe(0);
   });
 
   it('respects larger photo sizes in square mode', () => {
