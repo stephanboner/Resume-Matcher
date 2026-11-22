@@ -7,6 +7,7 @@ import {
   getPhotoDisplayDimensions,
 } from '@/components/resume/resume-profile-photo';
 import type { ResumePhotoSettings } from '@/components/dashboard/resume-component';
+import { fitSquarePhotoAroundText } from '@/lib/utils/resume-photo-fit';
 
 vi.mock('@/lib/api/resume', () => ({
   getResumePhotoUrl: (resumeId: string, version: number) =>
@@ -71,6 +72,41 @@ describe('resume photo layout', () => {
     expect(placement).not.toMatch(/calc\(|margin|padding|transform/);
     const image = css.match(/\.modernDeedy\s+\.image\s*\{([^}]*)\}/)?.[1] ?? '';
     expect(image).toMatch(/object-position:\s*center top\s*;/);
+  });
+
+  it('shrinks the square only enough to avoid the first summary line', () => {
+    // Based on a CV where a 120px photo would cover the first line of the summary.
+    const fitted = fitSquarePhotoAroundText(
+      120,
+      { top: 100, right: 1300 },
+      [
+        { left: 80, right: 940, top: 160, bottom: 180 }, // contact details, safely on the left
+        { left: 80, right: 1270, top: 292, bottom: 319 }, // full-width summary line
+      ],
+      1.7,
+      5
+    );
+    expect(fitted).toBeGreaterThan(100);
+    expect(fitted).toBeLessThan(120);
+    // In the example, the bottom of the image must sit above the summary's first line.
+    expect(100 + fitted * 1.7 + 5 * 1.7).toBeLessThanOrEqual(292);
+  });
+
+  it('does not shrink a photo with sufficient empty header space', () => {
+    expect(fitSquarePhotoAroundText(
+      120,
+      { top: 100, right: 1300 },
+      [{ left: 80, right: 800, top: 130, bottom: 175 }],
+      1.7
+    )).toBe(120);
+  });
+
+  it('never obscures text even with a crowded header', () => {
+    expect(fitSquarePhotoAroundText(
+      120,
+      { top: 100, right: 1300 },
+      [{ left: 1100, right: 1290, top: 108, bottom: 190 }]
+    )).toBe(0);
   });
 
   it('respects larger photo sizes in square mode', () => {
