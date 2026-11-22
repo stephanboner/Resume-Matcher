@@ -50,7 +50,8 @@ describe('PageContainer page indicator', () => {
     expect(clippedText).not.toBeNull();
     expect(clippedText?.contains(photo)).toBe(false);
     expect(photo?.getAttribute('src')).toBe('/api/photo.webp');
-    expect(Number.parseFloat(photo?.style.top ?? 'NaN')).toBeGreaterThan(0);
+    expect(Number.parseFloat(photo?.style.top ?? 'NaN')).toBeCloseTo(mmToPx(4), 5);
+    expect(Number.parseFloat(photo?.style.right ?? 'NaN')).toBeCloseTo(mmToPx(4), 5);
     expect(Number.parseFloat(photo?.style.top ?? 'NaN')).toBeLessThan(mmToPx(10));
     expect(photo?.style.width).toBe('120px');
   });
