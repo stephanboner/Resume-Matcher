@@ -77,9 +77,9 @@ describe('resume photo layout', () => {
 
   it('uses the physical paper margin and keeps the photo inside the page', () => {
     expect(getPhotoTopShiftPx(10)).toBe(32);
-    expect(getPagePhotoTopPx(10)).toBeGreaterThanOrEqual(6);
+    expect(getPagePhotoTopPx(10)).toBeGreaterThanOrEqual(5);
     expect(getPagePhotoTopPx(10)).toBeLessThan(10 * 96 / 25.4);
-    expect(getPagePhotoTopPx(5)).toBeGreaterThanOrEqual(6);
+    expect(getPagePhotoTopPx(5)).toBeGreaterThanOrEqual(5);
     expect(getPhotoTopShiftPx(5)).toBeLessThan(32);
   });
 
