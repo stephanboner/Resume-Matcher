@@ -255,10 +255,10 @@ describe('modern-deedy.module.css', () => {
       join(process.cwd(), 'components/resume/styles/modern-deedy.module.css'),
       'utf8'
     );
-    const headerWithPhoto = css.match(/\\.headerWithPhoto\\s*\\{([^}]*)\\}/)?.[1] ?? '';
+    const headerWithPhoto = css.match(/\.headerWithPhoto\s*\{([^}]*)\}/)?.[1] ?? '';
     expect(headerWithPhoto).toContain('text-align: left');
     expect(headerWithPhoto).not.toMatch(/padding|margin|height|width|display/);
-    expect(css).not.toMatch(/\\.headerWithPhoto\\s+\\.contactRow\\s*>\\s*\\.pipe\\s*\\{/);
+    expect(css).not.toMatch(/\.headerWithPhoto\s+\.contactRow\s*>\s*\.pipe\s*\{/);
   });
 
   it('uses solid colours only, never opacity', () => {
