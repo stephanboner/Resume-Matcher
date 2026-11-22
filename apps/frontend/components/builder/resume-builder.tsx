@@ -1934,6 +1934,7 @@ const ResumeBuilderContent = ({ agentMode = false }: ResumeBuilderProps) => {
                       resumeId={resumeId}
                       name={resumeData.personalInfo?.name}
                       photo={resumeData.personalInfo?.photo ?? undefined}
+                      squarePhoto={templateSettings.template === 'modern-deedy'}
                       onUpload={handlePhotoUpload}
                       onEdit={handlePhotoEdit}
                       onRemove={handlePhotoRemove}
