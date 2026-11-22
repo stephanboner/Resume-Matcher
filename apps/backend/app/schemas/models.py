@@ -252,13 +252,13 @@ class PhotoMutation(BaseModel):
     @model_validator(mode="after")
     def validate_crop(self) -> "PhotoMutation":
         if self.cropX + self.cropWidth > 100.000001 or self.cropY + self.cropHeight > 100.000001:
-            raise ValueError("Photo crop exceeds image bounds")
+            raise ValueError("crop rectangle exceeds image bounds")
         return self
 
 
 class PhotoSettings(PhotoMutation):
     version: int = Field(ge=1)
-    aspectRatio: float = Field(gt=0)
+    aspectRatio: float = Field(default=1, gt=0)
 
 
 class PersonalInfo(BaseModel):
