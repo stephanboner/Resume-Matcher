@@ -13,6 +13,8 @@ from sqlalchemy import (
     JSON,
     Boolean,
     Float,
+    ForeignKey,
+    LargeBinary,
     Index,
     Integer,
     String,
@@ -80,6 +82,20 @@ class Resume(Base):
             postgresql_where=text("is_default_master"),
         ),
     )
+
+
+class ResumePhoto(Base):
+    """Server-managed binary assets for one CV; deleted together with its resume."""
+    __tablename__ = "resume_photos"
+    resume_id: Mapped[str] = mapped_column(String, ForeignKey("resumes.resume_id", ondelete="CASCADE"), primary_key=True)
+    source_data: Mapped[bytes] = mapped_column(LargeBinary)
+    display_data: Mapped[bytes] = mapped_column(LargeBinary)
+    mime_type: Mapped[str] = mapped_column(String, default="image/webp")
+    source_width: Mapped[int] = mapped_column(Integer)
+    source_height: Mapped[int] = mapped_column(Integer)
+    version: Mapped[int] = mapped_column(Integer)
+    created_at: Mapped[str] = mapped_column(String, default=_utcnow_iso)
+    updated_at: Mapped[str] = mapped_column(String, default=_utcnow_iso)
 
 
 class Job(Base):

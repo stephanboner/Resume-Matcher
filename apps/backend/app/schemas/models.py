@@ -241,6 +241,26 @@ class SectionType(str, Enum):
 
 
 # Resume Data Models (matching frontend types in resume-component.tsx)
+class PhotoMutation(BaseModel):
+    """Validated non-destructive crop and display size."""
+    cropX: float = Field(ge=0, le=100)
+    cropY: float = Field(ge=0, le=100)
+    cropWidth: float = Field(gt=0, le=100)
+    cropHeight: float = Field(gt=0, le=100)
+    size: int = Field(ge=64, le=112)
+
+    @model_validator(mode="after")
+    def validate_crop(self) -> "PhotoMutation":
+        if self.cropX + self.cropWidth > 100.000001 or self.cropY + self.cropHeight > 100.000001:
+            raise ValueError("Photo crop exceeds image bounds")
+        return self
+
+
+class PhotoSettings(PhotoMutation):
+    version: int = Field(ge=1)
+    aspectRatio: float = Field(gt=0)
+
+
 class PersonalInfo(BaseModel):
     """Personal information section."""
 
@@ -252,6 +272,7 @@ class PersonalInfo(BaseModel):
     website: str | None = None
     linkedin: str | None = None
     github: str | None = None
+    photo: PhotoSettings | None = None
 
 
 class Experience(BaseModel):

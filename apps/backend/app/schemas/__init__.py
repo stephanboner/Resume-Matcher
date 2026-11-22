@@ -55,6 +55,8 @@ from app.schemas.models import (
     LLMConfigResponse,
     PageFitSettings,
     PersonalInfo,
+    PhotoMutation,
+    PhotoSettings,
     Project,
     PromptConfigRequest,
     PromptConfigResponse,
@@ -84,6 +86,8 @@ from app.schemas.models import (
 
 __all__ = [
     "PersonalInfo",
+    "PhotoMutation",
+    "PhotoSettings",
     "Experience",
     "Education",
     "Project",
