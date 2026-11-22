@@ -120,6 +120,8 @@ export function ResumePhotoLayout({
       const lines: PhotoTextRect[] = [];
       const walker = document.createTreeWalker(textRoot, NodeFilter.SHOW_TEXT);
       const range = document.createRange();
+      // jsdom and a few embedded renderers lack Range.getClientRects().
+      if (typeof range.getClientRects !== 'function') return;
       let node: Node | null;
       while ((node = walker.nextNode())) {
         if (!node.textContent?.trim()) continue;
