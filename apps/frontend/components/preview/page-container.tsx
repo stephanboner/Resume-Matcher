@@ -1,9 +1,17 @@
 'use client';
 
-import React from 'react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
+import { fitSquarePhotoAroundText, type PhotoTextRect } from '@/lib/utils/resume-photo-fit';
+import { getPagePhotoTopPx } from '@/lib/utils/resume-photo-page';
 import { type PageSize, type MarginSettings } from '@/lib/types/template-settings';
 import { PAGE_DIMENSIONS, mmToPx } from '@/lib/constants/page-dimensions';
 import { useTranslations } from '@/lib/i18n';
+
+export interface PagePortrait {
+  url: string;
+  alt: string;
+  size: number;
+}
 
 interface PageContainerProps {
   pageSize: PageSize;
@@ -15,6 +23,8 @@ interface PageContainerProps {
   children: React.ReactNode;
   contentOffset?: number; // Where this page's content starts (in px)
   contentEnd?: number; // Where this page's content ends (in px)
+  /** Photo is a sibling of the clipped content: coordinates are from paper edges. */
+  pagePortrait?: PagePortrait;
 }
 
 /**
@@ -33,8 +43,12 @@ export function PageContainer({
   children,
   contentOffset = 0,
   contentEnd,
+  pagePortrait,
 }: PageContainerProps) {
   const { t } = useTranslations();
+  const paperRef = useRef<HTMLDivElement>(null);
+  const [fittedPortraitSize, setFittedPortraitSize] = useState<number | null>(null);
+  const [portraitFailed, setPortraitFailed] = useState(false);
   const pageDims = PAGE_DIMENSIONS[pageSize];
   const pageWidthPx = mmToPx(pageDims.width);
   const pageHeightPx = mmToPx(pageDims.height);
@@ -46,6 +60,7 @@ export function PageContainer({
 
   const contentWidth = pageWidthPx - marginLeftPx - marginRightPx;
   const maxContentHeight = pageHeightPx - marginTopPx - marginBottomPx;
+  const portraitTop = getPagePhotoTopPx(margins.top);
 
   // Calculate the actual visible height for this page
   // If contentEnd is provided, limit the height to avoid showing content that belongs on the next page
@@ -53,10 +68,78 @@ export function PageContainer({
     ? Math.min(maxContentHeight, contentEnd - contentOffset)
     : maxContentHeight;
 
+  // Measure from the physical paper border, NOT the clipped resume content.
+  // The photo can use the top page margin, while the original text geometry
+  // and pagination remain byte-for-byte identical.
+  useLayoutEffect(() => {
+    if (!pagePortrait || pageNumber !== 1 || !paperRef.current) return;
+    const paper = paperRef.current;
+    let active = true;
+    const measure = () => {
+      if (!active) return;
+      const paperRect = paper.getBoundingClientRect();
+      const pageScale = paperRect.width > 0 ? paperRect.width / pageWidthPx : scale;
+      if (!Number.isFinite(pageScale) || pageScale <= 0) return;
+      const firstSection = paper.querySelector<HTMLElement>('[data-resume-section]');
+      // If the resume has no sections (a blank CV), don't invent a constraint.
+      const sectionTop = firstSection?.getBoundingClientRect().top;
+      const sectionSpace = sectionTop == null
+        ? pagePortrait.size
+        : Math.max(0, Math.floor(
+            (sectionTop - paperRect.top) / pageScale - portraitTop - 8
+          ));
+      let fitted = Math.min(pagePortrait.size, sectionSpace);
+
+      // Also account for contact text that may extend unusually far right.
+      const textRoot = paper.querySelector<HTMLElement>('.resume-template-modern-deedy');
+      if (textRoot && typeof document.createRange === 'function') {
+        const range = document.createRange();
+        if (typeof range.getClientRects === 'function') {
+          const lines: PhotoTextRect[] = [];
+          const walker = document.createTreeWalker(textRoot, NodeFilter.SHOW_TEXT);
+          let node: Node | null;
+          while ((node = walker.nextNode())) {
+            if (!node.textContent?.trim()) continue;
+            range.selectNodeContents(node);
+            for (const rect of Array.from(range.getClientRects())) {
+              if (rect.width > 0 && rect.height > 0) {
+                lines.push({ left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom });
+              }
+            }
+          }
+          range.detach?.();
+          const right = paperRect.right - marginRightPx * pageScale;
+          const top = paperRect.top + portraitTop * pageScale;
+          fitted = Math.min(fitted, fitSquarePhotoAroundText(
+            fitted, { top, right }, lines, pageScale
+          ));
+        }
+      }
+      setFittedPortraitSize((old) => old === fitted ? old : fitted);
+    };
+
+    measure();
+    const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
+    const section = paper.querySelector<HTMLElement>('[data-resume-section]');
+    if (section) observer?.observe(section);
+    const content = paper.querySelector<HTMLElement>('.resume-template-modern-deedy');
+    if (content) observer?.observe(content);
+    window.addEventListener('resize', measure);
+    void document.fonts?.ready.then(measure);
+    return () => {
+      active = false;
+      observer?.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [pageNumber, pagePortrait?.url, pagePortrait?.size, portraitTop, pageWidthPx, marginRightPx, scale]);
+
+  const renderedPortraitSize = Math.min(pagePortrait?.size ?? 0, fittedPortraitSize ?? pagePortrait?.size ?? 0);
+
   return (
     <div className="relative flex flex-col items-center">
       {/* Page wrapper with scale transform */}
       <div
+        ref={paperRef}
         className="relative bg-white border-2 border-ink shadow-sw-card origin-top"
         style={{
           width: pageWidthPx,
@@ -106,6 +189,28 @@ export function PageContainer({
             {children}
           </div>
         </div>
+
+        {/* Page-level first-page portrait. A sibling of the clipped content so
+            the top paper margin is available without overflow/clip hacks. */}
+        {pagePortrait && pageNumber === 1 && renderedPortraitSize > 0 && !portraitFailed && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            data-paper-photo="true"
+            src={pagePortrait.url}
+            alt={pagePortrait.alt}
+            onError={() => setPortraitFailed(true)}
+            className="absolute z-20 bg-white"
+            style={{
+              top: portraitTop,
+              right: marginRightPx,
+              width: renderedPortraitSize,
+              height: renderedPortraitSize,
+              border: '1px solid var(--resume-border-primary)',
+              objectFit: 'cover',
+              objectPosition: 'center top',
+            }}
+          />
+        )}
 
         {/* Page number indicator */}
         <div

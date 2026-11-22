@@ -16,6 +16,7 @@ import { usePagination } from './use-pagination';
 import { PAGE_DIMENSIONS, mmToPx, getContentAreaPx } from '@/lib/constants/page-dimensions';
 import { useTranslations } from '@/lib/i18n';
 import { useLanguage } from '@/lib/context/language-context';
+import { getResumePhotoUrl } from '@/lib/api/resume';
 
 interface PaginatedPreviewProps {
   resumeData: ResumeData;
@@ -42,6 +43,14 @@ export function PaginatedPreview({ resumeData, settings, resumeId }: PaginatedPr
   const [zoom, setZoom] = useState(DEFAULT_ZOOM);
   const [showMargins, setShowMargins] = useState(false);
   const [autoZoom, setAutoZoom] = useState(true);
+  const photo = resumeData.personalInfo?.photo;
+  const paperPortrait = settings.template === 'modern-deedy' && resumeId && photo && photo.visible !== false
+    ? {
+        url: getResumePhotoUrl(resumeId, photo.version),
+        alt: `${resumeData.personalInfo?.name ?? ''} profile photo`.trim(),
+        size: Math.max(120, photo.size),
+      }
+    : undefined;
   const resumeSettings: TemplateSettings = {
     ...settings,
     margins: { top: 0, bottom: 0, left: 0, right: 0 },
@@ -197,6 +206,7 @@ export function PaginatedPreview({ resumeData, settings, resumeId }: PaginatedPr
         >
           <Resume
             resumeId={resumeId}
+            renderProfilePhoto={!paperPortrait}
             resumeData={resumeData}
             template={settings.template}
             settings={resumeSettings}
@@ -229,9 +239,11 @@ export function PaginatedPreview({ resumeData, settings, resumeId }: PaginatedPr
                 showMarginGuides={showMargins}
                 contentOffset={page.contentOffset}
                 contentEnd={page.contentEnd}
+                pagePortrait={index === 0 ? paperPortrait : undefined}
               >
                 <Resume
                   resumeId={index === 0 ? resumeId : undefined}
+                  renderProfilePhoto={!paperPortrait}
                   resumeData={resumeData}
                   template={settings.template}
                   settings={resumeSettings}
