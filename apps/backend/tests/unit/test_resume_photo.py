@@ -62,7 +62,7 @@ def test_photo_mutation_allows_boundary_rounding_noise() -> None:
 
 @pytest.mark.parametrize(
     ("field", "value"),
-    (("size", 63), ("size", 113)),
+    (("size", 63), ("size", 145)),
 )
 def test_photo_mutation_rejects_display_values_outside_limits(
     field: str,
