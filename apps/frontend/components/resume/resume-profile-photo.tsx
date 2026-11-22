@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import type { ResumePhotoSettings } from '@/components/dashboard/resume-component';
 import { getResumePhotoUrl } from '@/lib/api/resume';
 import styles from './styles/resume-profile-photo.module.css';
@@ -9,6 +9,8 @@ interface ResumeProfilePhotoProps {
   resumeId: string;
   name: string;
   photo: ResumePhotoSettings;
+  square?: boolean;
+  displaySize?: number;
   editable?: boolean;
   editLabel: string;
   profilePhotoLabel: string;
@@ -18,8 +20,10 @@ interface ResumeProfilePhotoProps {
 
 export function getPhotoDisplayDimensions(
   size: number,
-  aspectRatio: number
+  aspectRatio: number,
+  square = false
 ): { width: number; height: number } {
+  if (square) return { width: size, height: size };
   const ratio = Number.isFinite(aspectRatio) && aspectRatio > 0 ? aspectRatio : 1;
   if (ratio >= 1) {
     return { width: size, height: size / ratio };
@@ -31,13 +35,15 @@ function ResumeProfilePhoto({
   resumeId,
   name,
   photo,
+  square = false,
+  displaySize,
   editable = false,
   editLabel,
   profilePhotoLabel,
   onEditPhoto,
   onLoadError,
 }: ResumeProfilePhotoProps) {
-  const dimensions = getPhotoDisplayDimensions(photo.size, photo.aspectRatio);
+  const dimensions = getPhotoDisplayDimensions(displaySize ?? photo.size, photo.aspectRatio, square);
   return (
     <div className={`resume-profile-photo ${styles.photo}`} style={dimensions}>
       {/* Browser-native img loading is required so Playwright can await decode(). */}
@@ -65,6 +71,7 @@ interface ResumePhotoLayoutProps {
   resumeId?: string;
   name?: string;
   photo?: ResumePhotoSettings;
+  template?: string;
   editable?: boolean;
   editLabel?: string;
   profilePhotoLabel?: string;
@@ -76,6 +83,7 @@ export function ResumePhotoLayout({
   resumeId,
   name = '',
   photo,
+  template,
   editable,
   editLabel,
   profilePhotoLabel,
@@ -91,13 +99,27 @@ export function ResumePhotoLayout({
     return <>{children}</>;
   }
 
+  // Enlarge existing smaller photos in Modern Deedy without migrating their data.
+  // Other templates retain their adaptive sizing and crop behaviour.
+  const modernDeedy = template === 'modern-deedy';
+  const displaySize = modernDeedy ? Math.max(120, photo.size) : photo.size;
+  const layoutStyle: CSSProperties | undefined = modernDeedy
+    ? ({ '--resume-profile-photo-size': `${displaySize}px` } as CSSProperties)
+    : undefined;
+
   return (
-    <div data-photo-overlay="true" className={styles.wrapper}>
+    <div
+      data-photo-overlay="true"
+      className={`${styles.wrapper} ${modernDeedy ? styles.modernDeedy : ''}`}
+      style={layoutStyle}
+    >
       {children}
       <ResumeProfilePhoto
         resumeId={resumeId}
         name={name}
         photo={photo}
+        square={modernDeedy}
+        displaySize={displaySize}
         editable={editable}
         editLabel={editLabel ?? ''}
         profilePhotoLabel={profilePhotoLabel ?? ''}
