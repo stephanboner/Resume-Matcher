@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any, NoReturn
 from uuid import uuid4
 
-from fastapi import APIRouter, File, HTTPException, Query, Request, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import Response, StreamingResponse
 from pydantic import ValidationError
 
@@ -55,6 +55,7 @@ from app.schemas import (
     ImproveResumeResponse,
     InterviewPrepData,
     PageFitSettings,
+    PhotoMutation,
     RawResume,
     RefinementStats,
     ResumeData,
@@ -76,6 +77,7 @@ from app.schemas.models import ResumeTemplate
 from app.schemas.refinement import RefinementConfig
 from app.schemas.writing import ApplyKeywordsRequest
 from app.schemas.writing_report import WritingReport
+from app.services.resume_photo import (PhotoValidationError, MAX_UPLOAD_BYTES as MAX_PHOTO_UPLOAD_BYTES, process_uploaded_photo, render_photo_derivative, strip_photo_metadata)
 from app.services.ats import compute_ats_score
 from app.services.bullet_selector import SELECTABLE_SECTIONS
 from app.services.cover_letter import (
@@ -2388,6 +2390,8 @@ async def update_resume_endpoint(
         raise HTTPException(status_code=404, detail="Resume not found")
 
     updated_data = resume_data.model_dump()
+    # Photo metadata is server-owned; normal saves must neither forge nor remove it.
+    updated_data = db._with_photo_metadata(updated_data, db._photo_metadata(existing.get('processed_data')))
     updated_content = json.dumps(updated_data, indent=2)
 
     updated = await db.update_resume(
@@ -2436,6 +2440,104 @@ async def update_resume_endpoint(
             template_settings=updated.get("template_settings"),
         ),
     )
+
+
+
+async def _photo_response(resume_id: str) -> ResumeFetchResponse:
+    return await get_resume(resume_id)
+
+
+async def _photo_bytes(file: UploadFile) -> bytes:
+    result = bytearray()
+    while True:
+        chunk = await file.read(1024 * 1024)
+        if not chunk:
+            break
+        result.extend(chunk)
+        if len(result) > MAX_PHOTO_UPLOAD_BYTES:
+            raise HTTPException(status_code=413, detail="Photo exceeds 8 MB")
+    return bytes(result)
+
+
+@router.put("/{resume_id}/photo", response_model=ResumeFetchResponse)
+async def put_resume_photo(
+    resume_id: str, file: UploadFile = File(...),
+    crop_x: float = Form(...), crop_y: float = Form(...),
+    crop_width: float = Form(...), crop_height: float = Form(...),
+    size: int = Form(...),
+) -> ResumeFetchResponse:
+    allowed = {"image/jpeg": {"jpg", "jpeg"}, "image/png": {"png"}, "image/webp": {"webp"}}
+    extension = (file.filename or "").rsplit(".", 1)[-1].lower()
+    if extension not in allowed.get(file.content_type or "", set()):
+        raise HTTPException(status_code=422, detail="Only JPEG, PNG and WebP supported")
+    if await db.get_resume(resume_id) is None:
+        raise HTTPException(status_code=404, detail="Resume not found")
+    try:
+        mutation = PhotoMutation(
+            cropX=crop_x, cropY=crop_y, cropWidth=crop_width,
+            cropHeight=crop_height, size=size,
+        )
+        payload = await _photo_bytes(file)
+        processed = await asyncio.to_thread(process_uploaded_photo, payload, mutation)
+        mime_formats = {"image/jpeg": "JPEG", "image/png": "PNG", "image/webp": "WEBP"}
+        if processed.input_format != mime_formats[file.content_type]:
+            raise PhotoValidationError("Photo file content does not match declared type")
+        await db.put_resume_photo(
+            resume_id,
+            source_data=processed.source_data, display_data=processed.display_data,
+            source_width=processed.source_width, source_height=processed.source_height,
+            settings=mutation.model_dump(), aspect_ratio=processed.aspect_ratio,
+        )
+    except (PhotoValidationError, ValidationError, ValueError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return await _photo_response(resume_id)
+
+
+@router.patch("/{resume_id}/photo", response_model=ResumeFetchResponse)
+async def edit_resume_photo(resume_id: str, mutation: PhotoMutation) -> ResumeFetchResponse:
+    photo = await db.get_resume_photo(resume_id)
+    if photo is None:
+        raise HTTPException(status_code=404, detail="Resume photo not found")
+    try:
+        result = await asyncio.to_thread(render_photo_derivative, photo["source_data"], mutation)
+        await db.update_resume_photo(
+            resume_id, display_data=result.data, settings=mutation.model_dump(),
+            aspect_ratio=result.aspect_ratio,
+        )
+    except (PhotoValidationError, ValueError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return await _photo_response(resume_id)
+
+
+@router.get("/{resume_id}/photo/source")
+async def get_resume_photo_source(resume_id: str) -> Response:
+    photo = await db.get_resume_photo(resume_id)
+    if photo is None:
+        raise HTTPException(status_code=404, detail="Resume photo not found")
+    return Response(
+        content=photo["source_data"], media_type="image/webp",
+        headers={"Cache-Control": "private, max-age=60", "X-Content-Type-Options": "nosniff"},
+    )
+
+
+@router.get("/{resume_id}/photo")
+async def get_resume_photo(resume_id: str) -> Response:
+    photo = await db.get_resume_photo(resume_id)
+    if photo is None:
+        raise HTTPException(status_code=404, detail="Resume photo not found")
+    return Response(
+        content=photo["display_data"], media_type="image/webp",
+        headers={"Cache-Control": "private, max-age=60", "X-Content-Type-Options": "nosniff"},
+    )
+
+
+@router.delete("/{resume_id}/photo", response_model=ResumeFetchResponse)
+async def remove_resume_photo(resume_id: str) -> ResumeFetchResponse:
+    try:
+        await db.delete_resume_photo(resume_id)
+    except ResumeNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Resume not found") from exc
+    return await _photo_response(resume_id)
 
 
 @router.get("/{resume_id}/pdf")
@@ -2771,6 +2873,7 @@ async def duplicate_resume(resume_id: str) -> DuplicateResumeResponse:
             status_code=500, detail="Failed to duplicate resume. Please try again."
         ) from e
 
+    await db.clone_resume_photo(resume_id, duplicate["resume_id"])
     return DuplicateResumeResponse(
         resume_id=duplicate["resume_id"],
         title=duplicate["title"],
