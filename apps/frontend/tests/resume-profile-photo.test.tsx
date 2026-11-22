@@ -8,7 +8,7 @@ import {
 } from '@/components/resume/resume-profile-photo';
 import type { ResumePhotoSettings } from '@/components/dashboard/resume-component';
 import { fitSquarePhotoAroundText, fitSquarePhotoBeforeSection } from '@/lib/utils/resume-photo-fit';
-import { getPhotoTopShiftPx, getPagePhotoTopPx } from '@/lib/utils/resume-photo-page';
+import { PHOTO_PAGE_INSET_MM, getPhotoTopShiftPx, getPhotoRightShiftPx, getPagePhotoTopPx, getPagePhotoRightPx } from '@/lib/utils/resume-photo-page';
 
 vi.mock('@/lib/api/resume', () => ({
   getResumePhotoUrl: (resumeId: string, version: number) =>
@@ -68,19 +68,21 @@ describe('resume photo layout', () => {
       'utf8'
     );
     const placement = css.match(/\.modernDeedy\s+\.photo\s*\{([^}]*)\}/)?.[1] ?? '';
-    expect(placement).toMatch(/top:\s*calc\(-1 \* var\(--resume-profile-photo-top-shift/);
-    expect(placement).toMatch(/right:\s*0\s*;/);
+    expect(placement).toMatch(/top:\s*calc\(0px - var\(--resume-profile-photo-top-shift/);
+    expect(placement).toMatch(/right:\s*calc\(0px - var\(--resume-profile-photo-right-shift/);
     expect(placement).not.toMatch(/padding|transform/);
     const image = css.match(/\.modernDeedy\s+\.image\s*\{([^}]*)\}/)?.[1] ?? '';
     expect(image).toMatch(/object-position:\s*center top\s*;/);
   });
 
-  it('uses the physical paper margin and keeps the photo inside the page', () => {
-    expect(getPhotoTopShiftPx(10)).toBe(32);
-    expect(getPagePhotoTopPx(10)).toBeGreaterThanOrEqual(5);
-    expect(getPagePhotoTopPx(10)).toBeLessThan(10 * 96 / 25.4);
-    expect(getPagePhotoTopPx(5)).toBeGreaterThanOrEqual(5);
-    expect(getPhotoTopShiftPx(5)).toBeLessThan(32);
+  it('anchors to the physical TOP-RIGHT corner instead of content margins', () => {
+    const insetPx = PHOTO_PAGE_INSET_MM * 96 / 25.4;
+    expect(getPagePhotoTopPx(10)).toBeCloseTo(insetPx, 6);
+    expect(getPagePhotoRightPx(10)).toBeCloseTo(insetPx, 6);
+    expect(getPagePhotoTopPx(5)).toBeCloseTo(insetPx, 6);
+    expect(getPagePhotoRightPx(5)).toBeCloseTo(insetPx, 6);
+    expect(getPhotoTopShiftPx(10) + getPagePhotoTopPx(10)).toBeCloseTo(10 * 96 / 25.4, 6);
+    expect(getPhotoRightShiftPx(10) + getPagePhotoRightPx(10)).toBeCloseTo(10 * 96 / 25.4, 6);
   });
 
   it('shrinks the square only enough to avoid the first summary line', () => {
