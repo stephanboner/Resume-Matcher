@@ -101,12 +101,77 @@ export function resizeCrop(
   return resizeCorner(crop, handle, deltaX, deltaY);
 }
 
+/**
+ * Convert a percentage crop into the largest centred square inside it.
+ * Percentage height differs from percentage width when the source is not square.
+ */
+export function toSquareCrop(crop: CropRect, imageAspectRatio: number): CropRect {
+  if (!Number.isFinite(imageAspectRatio) || imageAspectRatio <= 0) return crop;
+  const cropWidth = Math.min(crop.cropWidth, crop.cropHeight / imageAspectRatio);
+  const cropHeight = cropWidth * imageAspectRatio;
+  return {
+    cropX: clamp(crop.cropX + (crop.cropWidth - cropWidth) / 2, 0, 100 - cropWidth),
+    cropY: clamp(crop.cropY + (crop.cropHeight - cropHeight) / 2, 0, 100 - cropHeight),
+    cropWidth,
+    cropHeight,
+  };
+}
+
+/**
+ * Resize a square crop from its dragged edge or corner, anchoring the opposite
+ * edge/corner. Both dimensions remain equal in source pixels, not percentages.
+ */
+export function resizeSquareCrop(
+  crop: CropRect,
+  handle: CropHandle,
+  deltaX: number,
+  deltaY: number,
+  imageAspectRatio: number
+): CropRect {
+  if (!Number.isFinite(imageAspectRatio) || imageAspectRatio <= 0) return crop;
+  const west = handle.endsWith('w');
+  const east = handle.endsWith('e');
+  const north = handle.startsWith('n');
+  const south = handle.startsWith('s');
+  const horizontal = east ? deltaX : west ? -deltaX : null;
+  const vertical = north ? -deltaY / imageAspectRatio : south ? deltaY / imageAspectRatio : null;
+  const delta =
+    horizontal === null
+      ? (vertical ?? 0)
+      : vertical === null
+        ? horizontal
+        : Math.abs(horizontal) >= Math.abs(vertical)
+          ? horizontal
+          : vertical;
+
+  const right = crop.cropX + crop.cropWidth;
+  const bottom = crop.cropY + crop.cropHeight;
+  const centerX = crop.cropX + crop.cropWidth / 2;
+  const centerY = crop.cropY + crop.cropHeight / 2;
+  const maxWidth = Math.min(
+    west ? right : east ? 100 - crop.cropX : 2 * Math.min(centerX, 100 - centerX),
+    (north ? bottom : south ? 100 - crop.cropY : 2 * Math.min(centerY, 100 - centerY)) /
+      imageAspectRatio
+  );
+  const minWidth = Math.min(maxWidth, Math.max(MIN_EDGE, MIN_EDGE / imageAspectRatio));
+  const cropWidth = clamp(crop.cropWidth + delta, minWidth, maxWidth);
+  const cropHeight = cropWidth * imageAspectRatio;
+  return {
+    cropX: west ? right - cropWidth : east ? crop.cropX : centerX - cropWidth / 2,
+    cropY: north ? bottom - cropHeight : south ? crop.cropY : centerY - cropHeight / 2,
+    cropWidth,
+    cropHeight,
+  };
+}
+
 interface AdaptiveCropBoxProps {
   imageUrl: string;
   value: CropRect;
   onChange: (crop: CropRect) => void;
   imageAlt?: string;
   disabled?: boolean;
+  squareAspectRatio?: number;
+  onSourceLoad?: (aspectRatio: number) => void;
   moveLabel: string;
   handleLabels: Record<CropHandle, string>;
 }
@@ -125,6 +190,8 @@ export function AdaptiveCropBox({
   onChange,
   imageAlt = '',
   disabled = false,
+  squareAspectRatio,
+  onSourceLoad,
   moveLabel,
   handleLabels,
 }: AdaptiveCropBoxProps) {
@@ -156,7 +223,9 @@ export function AdaptiveCropBox({
     onChange(
       drag.mode === 'move'
         ? moveCrop(drag.crop, deltaX, deltaY)
-        : resizeCrop(drag.crop, drag.mode, deltaX, deltaY)
+        : squareAspectRatio
+          ? resizeSquareCrop(drag.crop, drag.mode, deltaX, deltaY, squareAspectRatio)
+          : resizeCrop(drag.crop, drag.mode, deltaX, deltaY)
     );
   };
 
@@ -191,7 +260,11 @@ export function AdaptiveCropBox({
       if (!delta) return;
       event.preventDefault();
       event.stopPropagation();
-      onChange(resizeCrop(value, handle, delta.deltaX, delta.deltaY));
+      onChange(
+      squareAspectRatio
+        ? resizeSquareCrop(value, handle, delta.deltaX, delta.deltaY, squareAspectRatio)
+        : resizeCrop(value, handle, delta.deltaX, delta.deltaY)
+    );
     };
 
   return (
@@ -199,7 +272,18 @@ export function AdaptiveCropBox({
       <div ref={stageRef} className={styles.stage}>
         {/* The backend already normalizes orientation and strips metadata. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={imageUrl} alt={imageAlt} className={styles.sourceImage} draggable={false} />
+        <img
+          src={imageUrl}
+          alt={imageAlt}
+          className={styles.sourceImage}
+          draggable={false}
+          onLoad={(event) => {
+            const image = event.currentTarget;
+            if (image.naturalWidth > 0 && image.naturalHeight > 0) {
+              onSourceLoad?.(image.naturalWidth / image.naturalHeight);
+            }
+          }}
+        />
         <div
           role="group"
           aria-disabled={disabled}
