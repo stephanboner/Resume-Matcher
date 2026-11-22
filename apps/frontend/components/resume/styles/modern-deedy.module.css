@@ -32,6 +32,17 @@
   margin-bottom: var(--section-gap);
 }
 
+.headerWithPhoto {
+  /* Keep the first CV section below the full photo, and the header text beside it. */
+  text-align: left;
+  padding-right: calc(var(--resume-profile-photo-size, 120px) + 20px);
+  min-height: var(--resume-profile-photo-size, 120px);
+}
+
+.headerWithPhoto .contactRow {
+  justify-content: flex-start;
+}
+
 .name {
   font-family: var(--header-font);
   font-size: calc(var(--font-size-base) * var(--header-scale));
