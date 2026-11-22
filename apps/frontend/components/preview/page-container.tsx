@@ -90,7 +90,7 @@ export function PageContainer({
       const sectionSpace = sectionTop == null
         ? pagePortrait.size
         : Math.max(0, Math.floor(
-            (sectionTop - paperRect.top) / pageScale - portraitTop - 8
+            (sectionTop - paperRect.top) / pageScale - portraitTop - 3
           ));
       let fitted = Math.min(pagePortrait.size, sectionSpace);
 
